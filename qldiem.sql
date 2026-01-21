@@ -1,146 +1,153 @@
-use qldiem;
--- 1. Bảng Khoa: Quản lý các khoa trong trường
+-- Tạo database với bảng mã hỗ trợ tiếng Việt đầy đủ
+CREATE DATABASE IF NOT EXISTS qldiem CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE qldiem;
+
+-- 1. Bảng Khoa
 CREATE TABLE KHOA (
-    MaKhoa VARCHAR(10) PRIMARY KEY, -- Ví dụ: CNTT, KT
-    TenKhoa NVARCHAR(100) NOT NULL,
+    MaKhoa VARCHAR(10) PRIMARY KEY,
+    TenKhoa VARCHAR(100) NOT NULL,
     NgayThanhLap DATE,
-    TruongKhoa NVARCHAR(100) -- Tên trưởng khoa
+    TruongKhoa VARCHAR(100)
 );
 
--- 2. Bảng Ngành: Một khoa có nhiều ngành
+-- 2. Bảng Ngành
 CREATE TABLE NGANH (
-    MaNganh VARCHAR(10) PRIMARY KEY, -- Ví dụ: KTPM, HTTT
-    TenNganh NVARCHAR(100) NOT NULL,
+    MaNganh VARCHAR(10) PRIMARY KEY,
+    TenNganh VARCHAR(100) NOT NULL,
     MaKhoa VARCHAR(10) NOT NULL,
     FOREIGN KEY (MaKhoa) REFERENCES KHOA(MaKhoa)
 );
 
--- 3. Bảng Giảng Viên: Người dạy và nhập điểm
+-- 3. Bảng Giảng Viên
 CREATE TABLE GIANG_VIEN (
     MaGiangVien VARCHAR(20) PRIMARY KEY,
-    HoTen NVARCHAR(100) NOT NULL,
+    HoTen VARCHAR(100) NOT NULL,
     NgaySinh DATE,
-    GioiTinh NVARCHAR(10), -- Nam/Nữ
+    GioiTinh VARCHAR(10),
     Email VARCHAR(100),
     SoDienThoai VARCHAR(15),
-    HocVi NVARCHAR(50), -- Thạc sĩ, Tiến sĩ
+    HocVi VARCHAR(50),
     MaKhoa VARCHAR(10) NOT NULL,
-    TrangThai BIT DEFAULT 1, -- 1: Đang công tác, 0: Đã nghỉ
+    TrangThai BIT DEFAULT 1,
     FOREIGN KEY (MaKhoa) REFERENCES KHOA(MaKhoa)
 );
--- 4. Bảng Lớp Hành Chính: Lớp sinh hoạt của sinh viên (Ví dụ: K15-CNTT1)
+
+-- 4. Bảng Lớp Hành Chính
 CREATE TABLE LOP_HANH_CHINH (
     MaLop VARCHAR(20) PRIMARY KEY,
-    TenLop NVARCHAR(100) NOT NULL,
+    TenLop VARCHAR(100) NOT NULL,
     MaNganh VARCHAR(10) NOT NULL,
-    KhoaHoc INT, -- Khóa học (Ví dụ: 2024, 2025)
-    MaCoVan VARCHAR(20), -- Giảng viên cố vấn học tập
+    KhoaHoc INT,
+    MaCoVan VARCHAR(20),
     FOREIGN KEY (MaNganh) REFERENCES NGANH(MaNganh),
     FOREIGN KEY (MaCoVan) REFERENCES GIANG_VIEN(MaGiangVien)
 );
 
--- 5. Bảng Sinh Viên: Thông tin cá nhân
+-- 5. Bảng Sinh Viên
 CREATE TABLE SINH_VIEN (
     MaSinhVien VARCHAR(20) PRIMARY KEY,
-    HoTen NVARCHAR(100) NOT NULL,
+    HoTen VARCHAR(100) NOT NULL,
     NgaySinh DATE NOT NULL,
-    GioiTinh NVARCHAR(10),
-    DiaChi NVARCHAR(255),
+    GioiTinh VARCHAR(10),
+    DiaChi VARCHAR(255),
     Email VARCHAR(100),
     SoDienThoai VARCHAR(15),
     MaLop VARCHAR(20) NOT NULL,
-    TrangThaiHocTap NVARCHAR(50) DEFAULT N'Đang học', -- Đang học, Bảo lưu, Thôi học
+    TrangThaiHocTap VARCHAR(50) DEFAULT 'Đang học',
     FOREIGN KEY (MaLop) REFERENCES LOP_HANH_CHINH(MaLop)
 );
--- 6. Bảng Môn Học: Danh mục các môn
+
+-- 6. Bảng Môn Học
 CREATE TABLE MON_HOC (
     MaMonHoc VARCHAR(20) PRIMARY KEY,
-    TenMonHoc NVARCHAR(100) NOT NULL,
+    TenMonHoc VARCHAR(100) NOT NULL,
     SoTinChi INT NOT NULL CHECK (SoTinChi > 0),
     SoTietLyThuyet INT DEFAULT 0,
     SoTietThucHanh INT DEFAULT 0,
-    MaNganh VARCHAR(10), -- Môn này thuộc ngành nào quản lý
+    MaNganh VARCHAR(10),
     FOREIGN KEY (MaNganh) REFERENCES NGANH(MaNganh)
 );
 
--- 7. Bảng Học Kỳ: Quản lý thời gian đào tạo
+-- 7. Bảng Học Kỳ
 CREATE TABLE HOC_KY (
-    MaHocKy VARCHAR(10) PRIMARY KEY, -- Ví dụ: HK1_2024
-    TenHocKy NVARCHAR(50), -- Học kỳ 1 năm 2024-2025
+    MaHocKy VARCHAR(10) PRIMARY KEY,
+    TenHocKy VARCHAR(50),
     NamHoc INT,
     NgayBatDau DATE,
     NgayKetThuc DATE
 );
 
--- 8. Bảng Lớp Học Phần: Lớp thực tế mở ra để dạy môn học (Quan trọng)
--- Sinh viên đăng ký vào đây chứ không đăng ký vào Môn học chung chung
+-- 8. Bảng Lớp Học Phần
 CREATE TABLE LOP_HOC_PHAN (
-    MaLopHocPhan VARCHAR(20) PRIMARY KEY, -- Ví dụ: LHP001
+    MaLopHocPhan VARCHAR(20) PRIMARY KEY,
     MaMonHoc VARCHAR(20) NOT NULL,
     MaHocKy VARCHAR(10) NOT NULL,
-    MaGiangVien VARCHAR(20) NOT NULL, -- Giảng viên dạy lớp này
-    PhongHoc NVARCHAR(50),
+    MaGiangVien VARCHAR(20) NOT NULL,
+    PhongHoc VARCHAR(50),
     SoLuongToiDa INT DEFAULT 60,
-    TrangThai INT DEFAULT 1, -- 1: Đang mở, 0: Đã khóa sổ điểm
+    TrangThai INT DEFAULT 1,
     FOREIGN KEY (MaMonHoc) REFERENCES MON_HOC(MaMonHoc),
     FOREIGN KEY (MaHocKy) REFERENCES HOC_KY(MaHocKy),
     FOREIGN KEY (MaGiangVien) REFERENCES GIANG_VIEN(MaGiangVien)
 );
--- 9. Bảng Loại Điểm: Định nghĩa các đầu điểm (Chuyên cần, Giữa kỳ, Cuối kỳ...)
+
+-- 9. Bảng Loại Điểm
 CREATE TABLE LOAI_DIEM (
-    MaLoaiDiem VARCHAR(10) PRIMARY KEY, -- Ví dụ: CC, GK, TH, CK
-    TenLoaiDiem NVARCHAR(50) NOT NULL
+    MaLoaiDiem VARCHAR(10) PRIMARY KEY,
+    TenLoaiDiem VARCHAR(50) NOT NULL
 );
 
--- 10. Bảng Cấu Trúc Điểm: Quy định trọng số cho từng môn học
--- Bảng này trả lời câu hỏi: Môn Toán Cao Cấp tính điểm như thế nào?
+-- 10. Bảng Cấu Trúc Điểm
+-- Thay IDENTITY bằng AUTO_INCREMENT
 CREATE TABLE CAU_TRUC_DIEM (
-    ID INT IDENTITY(1,1) PRIMARY KEY, -- Auto increment
+    ID INT AUTO_INCREMENT PRIMARY KEY, 
     MaMonHoc VARCHAR(20) NOT NULL,
     MaLoaiDiem VARCHAR(10) NOT NULL,
-    HeSo FLOAT NOT NULL CHECK (HeSo > 0 AND HeSo <= 1), -- Ví dụ: 0.1, 0.4, 0.5
-    MoTa NVARCHAR(100), -- Ghi chú thêm (VD: Thi trắc nghiệm)
+    HeSo FLOAT NOT NULL CHECK (HeSo > 0 AND HeSo <= 1),
+    MoTa VARCHAR(100),
     FOREIGN KEY (MaMonHoc) REFERENCES MON_HOC(MaMonHoc),
     FOREIGN KEY (MaLoaiDiem) REFERENCES LOAI_DIEM(MaLoaiDiem)
 );
 
--- 11. Bảng Đăng Ký Học: Sinh viên đăng ký lớp học phần nào
+-- 11. Bảng Đăng Ký Học
+-- Thay IDENTITY bằng AUTO_INCREMENT và GETDATE() bằng CURRENT_TIMESTAMP
 CREATE TABLE DANG_KY_HOC (
-    MaDangKy INT IDENTITY(1,1) PRIMARY KEY,
+    MaDangKy INT AUTO_INCREMENT PRIMARY KEY,
     MaSinhVien VARCHAR(20) NOT NULL,
     MaLopHocPhan VARCHAR(20) NOT NULL,
-    NgayDangKy DATETIME DEFAULT GETDATE(),
-    DiemTongKet FLOAT, -- Điểm tổng kết hệ 10 (tự động tính hoặc nhập sau)
-    DiemChu VARCHAR(2), -- A, B+, C...
-    DiemSo FLOAT, -- Quy đổi hệ 4 (4.0, 3.5...)
-    KetQua BIT, -- 1: Qua môn, 0: Trượt
+    NgayDangKy DATETIME DEFAULT CURRENT_TIMESTAMP,
+    DiemTongKet FLOAT,
+    DiemChu VARCHAR(2),
+    DiemSo FLOAT,
+    KetQua BIT,
     FOREIGN KEY (MaSinhVien) REFERENCES SINH_VIEN(MaSinhVien),
     FOREIGN KEY (MaLopHocPhan) REFERENCES LOP_HOC_PHAN(MaLopHocPhan),
-    CONSTRAINT UQ_SinhVien_Lop UNIQUE (MaSinhVien, MaLopHocPhan) -- Một SV chỉ đăng ký 1 lần cho 1 lớp
+    CONSTRAINT UQ_SinhVien_Lop UNIQUE (MaSinhVien, MaLopHocPhan)
 );
 
--- 12. Bảng Chi Tiết Điểm: Lưu điểm thực tế của sinh viên
+-- 12. Bảng Chi Tiết Điểm
 CREATE TABLE CHI_TIET_DIEM (
-    MaChiTiet INT IDENTITY(1,1) PRIMARY KEY,
-    MaDangKy INT NOT NULL, -- Liên kết với bảng Đăng Ký Học
+    MaChiTiet INT AUTO_INCREMENT PRIMARY KEY,
+    MaDangKy INT NOT NULL,
     MaLoaiDiem VARCHAR(10) NOT NULL,
-    SoDiem DECIMAL(4, 2) CHECK (SoDiem >= 0 AND SoDiem <= 10), -- Lưu số lẻ (VD: 8.5)
-    NgayNhap DATETIME DEFAULT GETDATE(),
-    NguoiNhap VARCHAR(20), -- Mã giảng viên nhập
+    SoDiem DECIMAL(4, 2) CHECK (SoDiem >= 0 AND SoDiem <= 10),
+    NgayNhap DATETIME DEFAULT CURRENT_TIMESTAMP,
+    NguoiNhap VARCHAR(20),
     FOREIGN KEY (MaDangKy) REFERENCES DANG_KY_HOC(MaDangKy),
     FOREIGN KEY (MaLoaiDiem) REFERENCES LOAI_DIEM(MaLoaiDiem)
 );
 
--- 13. Bảng User: Quản lý thông tin đăng nhập và phân quyền
-CREATE TABLE USER (
-    MaUser INT IDENTITY(1,1) PRIMARY KEY, -- ID tự tăng
-    TenDangNhap VARCHAR(50) NOT NULL UNIQUE, -- Tên đăng nhập (username)
-    MatKhau VARCHAR(255) NOT NULL, -- Mật khẩu (hashed)
-    HoTen NVARCHAR(100) NOT NULL, -- Họ và tên người dùng
-    Email VARCHAR(100) UNIQUE, -- Email (nếu cần)
-    SoDienThoai VARCHAR(15), -- Số điện thoại
-    VaiTro NVARCHAR(50) NOT NULL, -- Vai trò (Admin, Giảng viên, Sinh viên, ...)
-    TrangThai BIT DEFAULT 1, -- 1: Hoạt động, 0: Bị khóa
-    NgayTao DATETIME DEFAULT GETDATE(), -- Ngày tạo tài khoản
-    NgayCapNhat DATETIME DEFAULT GETDATE() -- Ngày cập nhật cuối
+-- 13. Bảng User
+-- Tên bảng USER phải đặt trong dấu ` ` vì trùng từ khóa hệ thống của MySQL
+CREATE TABLE `USER` (
+    MaUser INT AUTO_INCREMENT PRIMARY KEY,
+    TenDangNhap VARCHAR(50) NOT NULL UNIQUE,
+    MatKhau VARCHAR(255) NOT NULL,
+    HoTen VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE,
+    SoDienThoai VARCHAR(15),
+    VaiTro VARCHAR(50) NOT NULL,
+    TrangThai BIT DEFAULT 1,
+    NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
