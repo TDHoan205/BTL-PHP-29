@@ -69,21 +69,34 @@ class Khoa {
         return false;
     }
 
-    // Xóa khoa
+    // Lấy thông tin một khoa theo mã khoa
+    public function getById($maKhoa) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaKhoa = :MaKhoa";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaKhoa", $maKhoa);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một khoa
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaKhoa = :MaKhoa";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
-
-        // bind id
         $stmt->bindParam(":MaKhoa", $this->MaKhoa);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm khoa theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenKhoa LIKE :criteria OR TruongKhoa LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

@@ -22,7 +22,16 @@ class MonHoc {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy thông tin một môn học theo mã
+    public function getById($maMonHoc) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaMonHoc = :MaMonHoc";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaMonHoc", $maMonHoc);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới môn học
@@ -94,6 +103,19 @@ class MonHoc {
             return true;
         }
         return false;
+    }
+
+    // Tìm kiếm môn học theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenMonHoc LIKE :criteria OR MaNganh LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

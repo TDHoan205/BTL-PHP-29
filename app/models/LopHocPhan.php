@@ -7,12 +7,9 @@ class LopHocPhan {
     private $table_name = "LOP_HOC_PHAN";
 
     public $MaLopHocPhan;
+    public $TenLop;
     public $MaMonHoc;
-    public $MaHocKy;
     public $MaGiangVien;
-    public $PhongHoc;
-    public $SoLuongToiDa;
-    public $TrangThai;
 
     public function __construct($db) {
         $this->conn = $db;
@@ -28,26 +25,20 @@ class LopHocPhan {
 
     // Tạo mới lớp học phần
     public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaLopHocPhan=:MaLopHocPhan, MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, MaGiangVien=:MaGiangVien, PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai";
+        $query = "INSERT INTO " . $this->table_name . " SET MaLopHocPhan=:MaLopHocPhan, MaMonHoc=:MaMonHoc, MaGiangVien=:MaGiangVien, TenLop=:TenLop";
         $stmt = $this->conn->prepare($query);
 
         // sanitize
         $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
         $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->MaHocKy = htmlspecialchars(strip_tags($this->MaHocKy));
         $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->PhongHoc = htmlspecialchars(strip_tags($this->PhongHoc));
-        $this->SoLuongToiDa = htmlspecialchars(strip_tags($this->SoLuongToiDa));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
+        $this->TenLop = htmlspecialchars(strip_tags($this->TenLop));
 
         // bind values
         $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
         $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":MaHocKy", $this->MaHocKy);
         $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":PhongHoc", $this->PhongHoc);
-        $stmt->bindParam(":SoLuongToiDa", $this->SoLuongToiDa);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
+        $stmt->bindParam(":TenLop", $this->TenLop);
 
         if ($stmt->execute()) {
             return true;
@@ -57,26 +48,20 @@ class LopHocPhan {
 
     // Cập nhật thông tin lớp học phần
     public function update() {
-        $query = "UPDATE " . $this->table_name . " SET MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, MaGiangVien=:MaGiangVien, PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai WHERE MaLopHocPhan=:MaLopHocPhan";
+        $query = "UPDATE " . $this->table_name . " SET MaMonHoc=:MaMonHoc, MaGiangVien=:MaGiangVien, TenLop=:TenLop WHERE MaLopHocPhan=:MaLopHocPhan";
         $stmt = $this->conn->prepare($query);
 
         // sanitize
         $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
         $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->MaHocKy = htmlspecialchars(strip_tags($this->MaHocKy));
         $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->PhongHoc = htmlspecialchars(strip_tags($this->PhongHoc));
-        $this->SoLuongToiDa = htmlspecialchars(strip_tags($this->SoLuongToiDa));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
+        $this->TenLop = htmlspecialchars(strip_tags($this->TenLop));
 
         // bind values
         $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
         $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":MaHocKy", $this->MaHocKy);
         $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":PhongHoc", $this->PhongHoc);
-        $stmt->bindParam(":SoLuongToiDa", $this->SoLuongToiDa);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
+        $stmt->bindParam(":TenLop", $this->TenLop);
 
         if ($stmt->execute()) {
             return true;
@@ -84,21 +69,34 @@ class LopHocPhan {
         return false;
     }
 
-    // Xóa lớp học phần
+    // Lấy thông tin một lớp học phần theo mã lớp học phần
+    public function getById($maLopHocPhan) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một lớp học phần
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-
-        // bind id
         $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm lớp học phần theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLop LIKE :criteria OR MaMonHoc LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

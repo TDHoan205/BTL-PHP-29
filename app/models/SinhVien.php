@@ -94,21 +94,21 @@ class SinhVien {
         return false;
     }
 
-    // Xóa sinh viên
+    // Lấy thông tin một sinh viên theo mã sinh viên
+    public function getById($maSinhVien) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaSinhVien = :MaSinhVien";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaSinhVien", $maSinhVien);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một sinh viên
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaSinhVien = :MaSinhVien";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaSinhVien = htmlspecialchars(strip_tags($this->MaSinhVien));
-
-        // bind id
         $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 }
 

@@ -11,6 +11,8 @@ class CauTrucDiem {
     public $MaLoaiDiem;
     public $HeSo;
     public $MoTa;
+    public $MaCauTruc;
+    public $TenCauTruc;
 
     public function __construct($db) {
         $this->conn = $db;
@@ -72,21 +74,34 @@ class CauTrucDiem {
         return false;
     }
 
-    // Xóa cấu trúc điểm
+    // Lấy thông tin một cấu trúc điểm theo mã
+    public function getById($maCauTruc) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaCauTruc = :MaCauTruc";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaCauTruc", $maCauTruc);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một cấu trúc điểm
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE ID = :ID";
+        $query = "DELETE FROM " . $this->table_name . " WHERE MaCauTruc = :MaCauTruc";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaCauTruc", $this->MaCauTruc);
+        return $stmt->execute();
+    }
+
+    // Tìm kiếm cấu trúc điểm theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenCauTruc LIKE :criteria OR MoTa LIKE :criteria";
         $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->ID = htmlspecialchars(strip_tags($this->ID));
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
 
-        // bind id
-        $stmt->bindParam(":ID", $this->ID);
-
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

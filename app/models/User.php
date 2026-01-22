@@ -4,8 +4,7 @@ require_once "../config/Database.php";
 
 class User {
     private $conn;
-    // qldiem.sql dùng bảng USERS (đổi tên vì USER là từ khóa MySQL)
-    private $table_name = "USERS";
+    private $table_name = "USER";
 
     public $MaUser;
     public $TenDangNhap;
@@ -27,7 +26,16 @@ class User {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy thông tin một người dùng theo ID
+    public function getById($userId) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaUser = :MaUser";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaUser", $userId);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới người dùng

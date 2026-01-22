@@ -12,6 +12,9 @@ class ChiTietDiem {
     public $SoDiem;
     public $NgayNhap;
     public $NguoiNhap;
+    public $MaSinhVien;
+    public $MaMonHoc;
+    public $Diem;
 
     public function __construct($db) {
         $this->conn = $db;
@@ -77,21 +80,34 @@ class ChiTietDiem {
         return false;
     }
 
-    // Xóa chi tiết điểm
+    // Lấy thông tin một chi tiết điểm theo mã
+    public function getById($maChiTiet) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaChiTiet = :MaChiTiet";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaChiTiet", $maChiTiet);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một chi tiết điểm
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaChiTiet = :MaChiTiet";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaChiTiet = htmlspecialchars(strip_tags($this->MaChiTiet));
-
-        // bind id
         $stmt->bindParam(":MaChiTiet", $this->MaChiTiet);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm chi tiết điểm theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaSinhVien LIKE :criteria OR MaMonHoc LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

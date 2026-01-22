@@ -21,7 +21,16 @@ class HocKy {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy thông tin một học kỳ theo mã
+    public function getById($maHocKy) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaHocKy = :MaHocKy";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaHocKy", $maHocKy);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới học kỳ
@@ -89,6 +98,19 @@ class HocKy {
             return true;
         }
         return false;
+    }
+
+    // Tìm kiếm học kỳ theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenHocKy LIKE :criteria OR NamHoc LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

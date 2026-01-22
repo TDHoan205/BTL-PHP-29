@@ -18,7 +18,16 @@ class LoaiDiem {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy thông tin một loại điểm theo mã
+    public function getById($maLoaiDiem) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLoaiDiem = :MaLoaiDiem";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaLoaiDiem", $maLoaiDiem);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới loại điểm
@@ -74,6 +83,19 @@ class LoaiDiem {
             return true;
         }
         return false;
+    }
+
+    // Tìm kiếm loại điểm theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLoaiDiem LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

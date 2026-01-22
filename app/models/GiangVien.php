@@ -94,21 +94,34 @@ class GiangVien {
         return false;
     }
 
-    // Xóa giảng viên
+    // Lấy thông tin một giảng viên theo mã giảng viên
+    public function getById($maGiangVien) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaGiangVien = :MaGiangVien";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaGiangVien", $maGiangVien);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một giảng viên
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaGiangVien = :MaGiangVien";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-
-        // bind id
         $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm giảng viên theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE HoTen LIKE :criteria OR Email LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

@@ -64,21 +64,34 @@ class Nganh {
         return false;
     }
 
-    // Xóa ngành
+    // Lấy thông tin một ngành theo mã ngành
+    public function getById($maNganh) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaNganh", $maNganh);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một ngành
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
-
-        // bind id
         $stmt->bindParam(":MaNganh", $this->MaNganh);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm ngành theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenNganh LIKE :criteria OR MaKhoa LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 

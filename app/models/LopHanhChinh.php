@@ -74,21 +74,34 @@ class LopHanhChinh {
         return false;
     }
 
-    // Xóa lớp hành chính
+    // Lấy thông tin một lớp hành chính theo mã lớp
+    public function getById($maLop) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLop = :MaLop";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaLop", $maLop);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Xóa một lớp hành chính
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaLop = :MaLop";
         $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaLop = htmlspecialchars(strip_tags($this->MaLop));
-
-        // bind id
         $stmt->bindParam(":MaLop", $this->MaLop);
+        return $stmt->execute();
+    }
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+    // Tìm kiếm lớp hành chính theo tiêu chí
+    public function search($criteria) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLop LIKE :criteria OR MaNganh LIKE :criteria";
+        $stmt = $this->conn->prepare($query);
+
+        // sanitize input
+        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
+        $stmt->bindParam(":criteria", $criteria);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
