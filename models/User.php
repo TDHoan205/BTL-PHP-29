@@ -4,7 +4,8 @@ require_once "../config/Database.php";
 
 class User {
     private $conn;
-    private $table_name = "USER";
+    // qldiem.sql dùng bảng USERS (đổi tên vì USER là từ khóa MySQL)
+    private $table_name = "USERS";
 
     public $MaUser;
     public $TenDangNhap;
