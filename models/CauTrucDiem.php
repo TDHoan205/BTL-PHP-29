@@ -24,12 +24,11 @@ class CauTrucDiem {
         return $stmt;
     }
 
-    // Tạo mới cấu trúc điểm
+
     public function create() {
         $query = "INSERT INTO " . $this->table_name . " SET MaMonHoc=:MaMonHoc, MaLoaiDiem=:MaLoaiDiem, HeSo=:HeSo, MoTa=:MoTa";
         $stmt = $this->conn->prepare($query);
 
-        // sanitize
         $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
         $this->MaLoaiDiem = htmlspecialchars(strip_tags($this->MaLoaiDiem));
         $this->HeSo = htmlspecialchars(strip_tags($this->HeSo));
