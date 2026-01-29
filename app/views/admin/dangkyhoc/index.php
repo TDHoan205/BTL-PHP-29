@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -8,6 +8,21 @@
     </button>
 </div>
 
+<!-- Error Message -->
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($data['success'])): ?>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($data['success']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
 <!-- Filter Bar -->
 <div class="filter-bar">
     <div class="search-box">
@@ -16,6 +31,11 @@
     </div>
     <select class="form-select" id="filterLopHP">
         <option value="">Tất cả lớp HP</option>
+        <?php if (!empty($data['lophocphans'])): ?>
+            <?php foreach($data['lophocphans'] as $lhp): ?>
+            <option value="<?= $lhp['MaLopHocPhan'] ?>"><?= $lhp['MaLopHocPhan'] ?></option>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </select>
 </div>
 
@@ -43,39 +63,38 @@
                     <tr>
                         <th>Mã ĐK</th>
                         <th>MSSV</th>
+                        <th>Họ tên</th>
                         <th>Lớp HP</th>
+                        <th>Môn học</th>
                         <th>Ngày đăng ký</th>
                         <th>Điểm TK</th>
-                        <th>Điểm chữ</th>
                         <th>Kết quả</th>
-                        <th width="120" class="text-center">Thao tác</th>
+                        <th width="100" class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(!empty($data['dangkyhocs'])): ?>
                         <?php foreach($data['dangkyhocs'] as $dk): ?>
                         <tr>
-                            <td><strong><?= $dk['MaDangKy'] ?></strong></td>
-                            <td><?= $dk['MaSinhVien'] ?></td>
-                            <td><span class="badge bg-info"><?= $dk['MaLopHocPhan'] ?></span></td>
-                            <td><?= isset($dk['NgayDangKy']) ? date('d/m/Y', strtotime($dk['NgayDangKy'])) : '' ?></td>
+                            <td><strong><?= htmlspecialchars($dk['MaDangKy']) ?></strong></td>
+                            <td><?= htmlspecialchars($dk['MaSinhVien']) ?></td>
+                            <td><?= htmlspecialchars($dk['TenSinhVien'] ?? '') ?></td>
+                            <td><span class="badge bg-info"><?= htmlspecialchars($dk['MaLopHocPhan']) ?></span></td>
+                            <td><?= htmlspecialchars($dk['TenMonHoc'] ?? '') ?></td>
+                            <td><?= isset($dk['NgayDangKy']) ? date('d/m/Y', strtotime($dk['NgayDangKy'])) : '-' ?></td>
                             <td><strong><?= $dk['DiemTongKet'] ?? '-' ?></strong></td>
-                            <td><?= $dk['DiemChu'] ?? '-' ?></td>
                             <td>
                                 <?php if(($dk['KetQua'] ?? '') == 'Đạt'): ?>
-                                    <span class="grade-pass">Đạt</span>
+                                    <span class="badge bg-success">Đạt</span>
                                 <?php elseif(isset($dk['KetQua']) && $dk['KetQua']): ?>
-                                    <span class="grade-fail">Không đạt</span>
+                                    <span class="badge bg-danger">Không đạt</span>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <a href="index.php?url=DangKyHoc/edit/<?= $dk['MaDangKy'] ?>" class="btn btn-sm btn-warning me-1">
-                                    <i class="fas fa-edit"></i>
-                                </a>
                                 <a href="index.php?url=DangKyHoc/delete/<?= $dk['MaDangKy'] ?>" 
-                                   class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
+                                   class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa đăng ký này?')">
                                     <i class="fas fa-trash"></i>
                                 </a>
                             </td>
@@ -83,7 +102,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 <div class="empty-state">
                                     <i class="fas fa-clipboard-list"></i>
                                     <h5>Chưa có đăng ký nào</h5>
@@ -109,16 +128,30 @@
             <form action="index.php?url=DangKyHoc/store" method="POST">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Mã đăng ký <span class="text-danger">*</span></label>
-                        <input type="text" name="MaDangKy" class="form-control" placeholder="VD: DK001" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">MSSV <span class="text-danger">*</span></label>
-                        <input type="text" name="MaSinhVien" class="form-control" placeholder="Nhập mã sinh viên" required>
+                        <label class="form-label">Sinh viên <span class="text-danger">*</span></label>
+                        <select name="MaSinhVien" class="form-select" required>
+                            <option value="">-- Chọn sinh viên --</option>
+                            <?php if (!empty($data['sinhviens'])): ?>
+                                <?php foreach($data['sinhviens'] as $sv): ?>
+                                <option value="<?= $sv['MaSinhVien'] ?>">
+                                    <?= htmlspecialchars($sv['MaSinhVien'] . ' - ' . $sv['HoTen']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Lớp học phần <span class="text-danger">*</span></label>
-                        <input type="text" name="MaLopHocPhan" class="form-control" placeholder="Mã lớp học phần" required>
+                        <select name="MaLopHocPhan" class="form-select" required>
+                            <option value="">-- Chọn lớp học phần --</option>
+                            <?php if (!empty($data['lophocphans'])): ?>
+                                <?php foreach($data['lophocphans'] as $lhp): ?>
+                                <option value="<?= $lhp['MaLopHocPhan'] ?>">
+                                    <?= htmlspecialchars($lhp['MaLopHocPhan']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -139,6 +172,15 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
         row.style.display = text.includes(filter) ? '' : 'none';
     });
 });
+
+document.getElementById('filterLopHP').addEventListener('change', function() {
+    let filter = this.value.toLowerCase();
+    let rows = document.querySelectorAll('#dataTable tbody tr');
+    rows.forEach(row => {
+        let lhp = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+        row.style.display = !filter || lhp.includes(filter) ? '' : 'none';
+    });
+});
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

@@ -84,7 +84,7 @@ class ThongKeController {
             'breadcrumb' => 'Thống kê'
         ];
         
-        require_once "../app/views/thongke/index.php";
+        require_once "../app/views/admin/thongke/index.php";
     }
 }
 ?>

@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -8,6 +8,13 @@
     </button>
 </div>
 
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
 <!-- Filter Bar -->
 <div class="filter-bar">
     <div class="search-box">
@@ -16,6 +23,11 @@
     </div>
     <select class="form-select" id="filterNganh">
         <option value="">Tất cả ngành</option>
+        <?php if (isset($data['nganhs'])): ?>
+            <?php foreach ($data['nganhs'] as $n): ?>
+            <option value="<?= $n['MaNganh'] ?>"><?= htmlspecialchars($n['TenNganh']) ?></option>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </select>
 </div>
 
@@ -36,7 +48,7 @@
                         <th>Khóa học</th>
                         <th>Cố vấn</th>
                         <th>Sĩ số</th>
-                        <th width="120" class="text-center">Thao tác</th>
+                        <th width="120">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -49,14 +61,15 @@
                             <td><?= $lop['KhoaHoc'] ?? '' ?></td>
                             <td><?= $lop['MaCoVan'] ?? '' ?></td>
                             <td><span class="badge bg-success"><?= $lop['SiSo'] ?? 0 ?> SV</span></td>
-                            <td class="text-center">
-                                <a href="index.php?url=LopHanhChinh/edit/<?= $lop['MaLop'] ?>" class="btn btn-sm btn-warning me-1">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="index.php?url=LopHanhChinh/delete/<?= $lop['MaLop'] ?>" 
-                                   class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                            <td>
+                                <div class="action-btns">
+                                    <a href="index.php?url=LopHanhChinh/edit/<?= $lop['MaLop'] ?>" class="btn-action btn-action-edit" data-tooltip="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="index.php?url=LopHanhChinh/delete/<?= $lop['MaLop'] ?>" class="btn-action btn-action-delete" data-tooltip="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -96,16 +109,30 @@
                         <input type="text" name="TenLop" class="form-control" placeholder="Nhập tên lớp" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ngành</label>
-                        <input type="text" name="MaNganh" class="form-control" placeholder="Mã ngành">
+                        <label class="form-label">Ngành <span class="text-danger">*</span></label>
+                        <select name="MaNganh" class="form-select" required>
+                            <option value="">-- Chọn ngành --</option>
+                            <?php if (isset($data['nganhs'])): ?>
+                                <?php foreach ($data['nganhs'] as $n): ?>
+                                <option value="<?= $n['MaNganh'] ?>"><?= htmlspecialchars($n['TenNganh']) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Khóa học</label>
-                        <input type="text" name="KhoaHoc" class="form-control" placeholder="VD: K66">
+                        <input type="number" name="KhoaHoc" class="form-control" placeholder="VD: 21" min="1" max="99">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Cố vấn học tập</label>
-                        <input type="text" name="MaCoVan" class="form-control" placeholder="Mã giảng viên cố vấn">
+                        <select name="MaCoVan" class="form-select">
+                            <option value="">-- Chọn cố vấn --</option>
+                            <?php if (isset($data['giangviens'])): ?>
+                                <?php foreach ($data['giangviens'] as $gv): ?>
+                                <option value="<?= $gv['MaGiangVien'] ?>"><?= htmlspecialchars($gv['HoTen']) ?> (<?= $gv['MaGiangVien'] ?>)</option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -128,4 +155,4 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

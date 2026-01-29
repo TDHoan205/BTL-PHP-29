@@ -23,7 +23,7 @@ class CauTrucDiemController {
     }
 
     public function create() {
-        require_once "../views/cautrucdiem/create.php";
+        require_once "../views/admin/cautrucdiem/create.php";
     }
 
     public function store() {
@@ -44,7 +44,7 @@ class CauTrucDiemController {
     public function edit($id) {
         // Trong model bạn dùng getById theo MaCauTruc
         $ctd = $this->ctdModel->getById($id);
-        require_once "../views/cautrucdiem/edit.php";
+        require_once "../views/admin/cautrucdiem/edit.php";
     }
 
     public function update($id) {

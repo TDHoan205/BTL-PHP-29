@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -7,6 +7,21 @@
         <i class="fas fa-plus me-2"></i>Thêm khoa
     </button>
 </div>
+
+<!-- Error/Success Messages -->
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($data['success'])): ?>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($data['success']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
@@ -42,14 +57,18 @@
                             <td><?= $khoa['TenKhoa'] ?></td>
                             <td><?= isset($khoa['NgayThanhLap']) ? date('d/m/Y', strtotime($khoa['NgayThanhLap'])) : '' ?></td>
                             <td><?= $khoa['TruongKhoa'] ?? '' ?></td>
-                            <td class="text-center">
-                                <a href="index.php?url=Khoa/edit/<?= $khoa['MaKhoa'] ?>" class="btn btn-sm btn-warning me-1">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="index.php?url=Khoa/delete/<?= $khoa['MaKhoa'] ?>" 
-                                   class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                            <td>
+                                <div class="action-btns">
+                                    <a href="index.php?url=Khoa/edit/<?= $khoa['MaKhoa'] ?>" 
+                                       class="btn-action btn-action-edit" data-tooltip="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="index.php?url=Khoa/delete/<?= $khoa['MaKhoa'] ?>" 
+                                       class="btn-action btn-action-delete" data-tooltip="Xóa"
+                                       onclick="return confirm('Bạn có chắc chắn muốn xóa khoa này?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -117,4 +136,4 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

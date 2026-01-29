@@ -1,92 +1,111 @@
 <?php
+/**
+ * NganhModel - Quản lý dữ liệu Ngành
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class NganhModel {
-    private $conn;
-    private $table_name = "NGANH";
+class NganhModel extends Model {
+    protected $table_name = "NGANH";
+    protected $primaryKey = "MaNganh";
 
     public $MaNganh;
     public $TenNganh;
     public $MaKhoa;
 
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    // Lấy tất cả các ngành
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Tạo mới một ngành
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaNganh=:MaNganh, TenNganh=:TenNganh, MaKhoa=:MaKhoa";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
-        $this->TenNganh = htmlspecialchars(strip_tags($this->TenNganh));
-        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
-
-        // bind values
-        $stmt->bindParam(":MaNganh", $this->MaNganh);
-        $stmt->bindParam(":TenNganh", $this->TenNganh);
-        $stmt->bindParam(":MaKhoa", $this->MaKhoa);
-
-        if ($stmt->execute()) {
-            return true;
+    /**
+     * Lấy tất cả ngành kèm thông tin khoa
+     */
+    public function readAllWithKhoa() {
+        try {
+            $query = "SELECT n.*, k.TenKhoa 
+                      FROM {$this->table_name} n
+                      LEFT JOIN KHOA k ON n.MaKhoa = k.MaKhoa
+                      ORDER BY n.TenNganh";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithKhoa: " . $e->getMessage());
+            return [];
         }
-        return false;
     }
 
-    // Lấy thông tin một ngành theo mã
+    /**
+     * Lấy thông tin một ngành theo mã
+     */
     public function getById($maNganh) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaNganh", $maNganh);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaNganh = :MaNganh";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaNganh", $maNganh);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
     }
 
-    // Cập nhật thông tin ngành
+    /**
+     * Tạo mới ngành
+     */
+    public function create() {
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaNganh=:MaNganh, TenNganh=:TenNganh, MaKhoa=:MaKhoa";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaNganh", $this->sanitize($this->MaNganh));
+            $stmt->bindValue(":TenNganh", $this->sanitize($this->TenNganh));
+            $stmt->bindValue(":MaKhoa", $this->sanitize($this->MaKhoa) ?: null);
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm ngành. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'NganhModel::create');
+        }
+    }
+
+    /**
+     * Cập nhật ngành
+     */
     public function update() {
-        $query = "UPDATE " . $this->table_name . " SET TenNganh=:TenNganh, MaKhoa=:MaKhoa WHERE MaNganh=:MaNganh";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET TenNganh=:TenNganh, MaKhoa=:MaKhoa 
+                      WHERE MaNganh=:MaNganh";
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
-        $this->TenNganh = htmlspecialchars(strip_tags($this->TenNganh));
-        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
+            $stmt->bindValue(":MaNganh", $this->sanitize($this->MaNganh));
+            $stmt->bindValue(":TenNganh", $this->sanitize($this->TenNganh));
+            $stmt->bindValue(":MaKhoa", $this->sanitize($this->MaKhoa) ?: null);
 
-        // bind values
-        $stmt->bindParam(":MaNganh", $this->MaNganh);
-        $stmt->bindParam(":TenNganh", $this->TenNganh);
-        $stmt->bindParam(":MaKhoa", $this->MaKhoa);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật ngành. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'NganhModel::update');
         }
-        return false;
     }
 
-    // Xóa ngành
+    /**
+     * Xóa ngành
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaNganh = :MaNganh";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaNganh", $this->sanitize($this->MaNganh));
 
-        // sanitize
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
-
-        // bind id
-        $stmt->bindParam(":MaNganh", $this->MaNganh);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa ngành. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'NganhModel::delete');
         }
-        return false;
     }
 }

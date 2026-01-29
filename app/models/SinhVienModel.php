@@ -1,10 +1,12 @@
 <?php
+/**
+ * SinhVienModel - Quản lý dữ liệu Sinh viên
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class SinhVienModel {
-    private $conn;
-    private $table_name = "SINH_VIEN";
+class SinhVienModel extends Model {
+    protected $table_name = "SINH_VIEN";
+    protected $primaryKey = "MaSinhVien";
 
     public $MaSinhVien;
     public $HoTen;
@@ -16,98 +18,139 @@ class SinhVienModel {
     public $MaLop;
     public $TrangThaiHocTap;
 
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    // Lấy tất cả sinh viên
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Tạo mới sinh viên
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaSinhVien=:MaSinhVien, HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, DiaChi=:DiaChi, Email=:Email, SoDienThoai=:SoDienThoai, MaLop=:MaLop, TrangThaiHocTap=:TrangThaiHocTap";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaSinhVien = htmlspecialchars(strip_tags($this->MaSinhVien));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->NgaySinh = htmlspecialchars(strip_tags($this->NgaySinh));
-        $this->GioiTinh = htmlspecialchars(strip_tags($this->GioiTinh));
-        $this->DiaChi = htmlspecialchars(strip_tags($this->DiaChi));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->MaLop = htmlspecialchars(strip_tags($this->MaLop));
-        $this->TrangThaiHocTap = htmlspecialchars(strip_tags($this->TrangThaiHocTap));
-
-        // bind values
-        $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":NgaySinh", $this->NgaySinh);
-        $stmt->bindParam(":GioiTinh", $this->GioiTinh);
-        $stmt->bindParam(":DiaChi", $this->DiaChi);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":MaLop", $this->MaLop);
-        $stmt->bindParam(":TrangThaiHocTap", $this->TrangThaiHocTap);
-
-        if ($stmt->execute()) {
-            return true;
+    /**
+     * Lấy tất cả sinh viên kèm thông tin lớp
+     */
+    public function readAllWithLop() {
+        try {
+            $query = "SELECT sv.*, lhc.TenLop 
+                      FROM {$this->table_name} sv
+                      LEFT JOIN LOP_HANH_CHINH lhc ON sv.MaLop = lhc.MaLop
+                      ORDER BY sv.HoTen";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithLop: " . $e->getMessage());
+            return [];
         }
-        return false;
     }
 
-    // Lấy thông tin một sinh viên theo mã sinh viên
+    /**
+     * Lấy thông tin một sinh viên theo mã
+     */
     public function getById($maSinhVien) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaSinhVien = :MaSinhVien";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaSinhVien", $maSinhVien);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Cập nhật thông tin sinh viên
-    public function update() {
-        $query = "UPDATE " . $this->table_name . " SET HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, DiaChi=:DiaChi, Email=:Email, SoDienThoai=:SoDienThoai, MaLop=:MaLop, TrangThaiHocTap=:TrangThaiHocTap WHERE MaSinhVien=:MaSinhVien";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaSinhVien = htmlspecialchars(strip_tags($this->MaSinhVien));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->NgaySinh = htmlspecialchars(strip_tags($this->NgaySinh));
-        $this->GioiTinh = htmlspecialchars(strip_tags($this->GioiTinh));
-        $this->DiaChi = htmlspecialchars(strip_tags($this->DiaChi));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->MaLop = htmlspecialchars(strip_tags($this->MaLop));
-        $this->TrangThaiHocTap = htmlspecialchars(strip_tags($this->TrangThaiHocTap));
-
-        // bind values
-        $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":NgaySinh", $this->NgaySinh);
-        $stmt->bindParam(":GioiTinh", $this->GioiTinh);
-        $stmt->bindParam(":DiaChi", $this->DiaChi);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":MaLop", $this->MaLop);
-        $stmt->bindParam(":TrangThaiHocTap", $this->TrangThaiHocTap);
-
-        if ($stmt->execute()) {
-            return true;
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaSinhVien = :MaSinhVien";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaSinhVien", $maSinhVien);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
         }
-        return false;
     }
 
-    // Xóa một sinh viên
+    /**
+     * Tạo mới sinh viên
+     */
+    public function create() {
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaSinhVien=:MaSinhVien, HoTen=:HoTen, NgaySinh=:NgaySinh, 
+                          GioiTinh=:GioiTinh, DiaChi=:DiaChi, Email=:Email, 
+                          SoDienThoai=:SoDienThoai, MaLop=:MaLop, TrangThaiHocTap=:TrangThaiHocTap";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaSinhVien", $this->sanitize($this->MaSinhVien));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":NgaySinh", $this->sanitize($this->NgaySinh) ?: null);
+            $stmt->bindValue(":GioiTinh", $this->sanitize($this->GioiTinh) ?: null);
+            $stmt->bindValue(":DiaChi", $this->sanitize($this->DiaChi) ?: null);
+            $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
+            $stmt->bindValue(":MaLop", $this->sanitize($this->MaLop) ?: null);
+            $stmt->bindValue(":TrangThaiHocTap", $this->sanitize($this->TrangThaiHocTap) ?: 'Đang học');
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm sinh viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'SinhVienModel::create');
+        }
+    }
+
+    /**
+     * Cập nhật thông tin sinh viên
+     */
+    public function update() {
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, 
+                          DiaChi=:DiaChi, Email=:Email, SoDienThoai=:SoDienThoai, 
+                          MaLop=:MaLop, TrangThaiHocTap=:TrangThaiHocTap 
+                      WHERE MaSinhVien=:MaSinhVien";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaSinhVien", $this->sanitize($this->MaSinhVien));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":NgaySinh", $this->sanitize($this->NgaySinh) ?: null);
+            $stmt->bindValue(":GioiTinh", $this->sanitize($this->GioiTinh) ?: null);
+            $stmt->bindValue(":DiaChi", $this->sanitize($this->DiaChi) ?: null);
+            $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
+            $stmt->bindValue(":MaLop", $this->sanitize($this->MaLop) ?: null);
+            $stmt->bindValue(":TrangThaiHocTap", $this->sanitize($this->TrangThaiHocTap));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật sinh viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'SinhVienModel::update');
+        }
+    }
+
+    /**
+     * Xóa sinh viên
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaSinhVien = :MaSinhVien";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-        return $stmt->execute();
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaSinhVien = :MaSinhVien";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaSinhVien", $this->sanitize($this->MaSinhVien));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa sinh viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'SinhVienModel::delete');
+        }
+    }
+
+    /**
+     * Tìm kiếm sinh viên
+     */
+    public function search($keyword) {
+        try {
+            $query = "SELECT sv.*, lhc.TenLop 
+                      FROM {$this->table_name} sv
+                      LEFT JOIN LOP_HANH_CHINH lhc ON sv.MaLop = lhc.MaLop
+                      WHERE sv.HoTen LIKE :keyword 
+                         OR sv.Email LIKE :keyword 
+                         OR sv.MaSinhVien LIKE :keyword
+                      ORDER BY sv.HoTen";
+            $stmt = $this->conn->prepare($query);
+            $keyword = "%" . $this->sanitize($keyword) . "%";
+            $stmt->bindParam(":keyword", $keyword);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in search: " . $e->getMessage());
+            return [];
+        }
     }
 }

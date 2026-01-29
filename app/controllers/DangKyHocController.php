@@ -1,72 +1,81 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/DangKyHocModel.php';
+/**
+ * DangKyHocController - Quản lý Đăng ký học
+ */
+require_once __DIR__ . '/../core/Controller.php';
 
-class DangKyHocController {
-    private $db;
+class DangKyHocController extends Controller {
     private $dkhModel;
+    private $svModel;
+    private $lhpModel;
 
     public function __construct() {
-        $database = new Database();
-        $this->db = $database->getConnection();
-        $this->dkhModel = new DangKyHocModel($this->db);
+        parent::__construct();
+        $this->dkhModel = $this->model('DangKyHocModel');
+        $this->svModel = $this->model('SinhVienModel');
+        $this->lhpModel = $this->model('LopHocPhanModel');
+    }
+
+    private function buildIndexData($error = '', $success = '') {
+        return [
+            'dangkyhocs' => $this->dkhModel->readAllWithDetails(),
+            'sinhviens' => $this->svModel->readAll(),
+            'lophocphans' => $this->lhpModel->readAll(),
+            'pageTitle' => 'Quản lý Đăng ký học',
+            'breadcrumb' => 'Đăng ký học',
+            'error' => $error,
+            'success' => $success
+        ];
     }
 
     public function index() {
-        $dangkyhocs = $this->dkhModel->readAll();
-        $data = [
-            'dangkyhocs' => $dangkyhocs,
-            'pageTitle' => 'Quản lý Đăng ký học',
-            'breadcrumb' => 'Đăng ký học'
-        ];
-        require_once "../app/views/dangkyhoc/index.php";
-    }
-
-    public function create() {
-        require_once "../views/dangkyhoc/create.php";
+        $data = $this->buildIndexData();
+        require_once __DIR__ . '/../views/admin/dangkyhoc/index.php';
     }
 
     public function store() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            // Model của bạn yêu cầu nhập MaDangKy thủ công
-            $this->dkhModel->MaDangKy = $_POST['MaDangKy'] ?? null;
-            $this->dkhModel->MaSinhVien = $_POST['MaSinhVien'] ?? null;
-            $this->dkhModel->MaLopHocPhan = $_POST['MaLopHocPhan'] ?? null;
-            
-            if ($this->dkhModel->create()) {
-                header("Location: index.php?url=DangKyHoc/index");
-            } else {
-                echo "Lỗi đăng ký học.";
-            }
+        if (!$this->isPost()) {
+            $this->redirect('DangKyHoc/index');
         }
-    }
 
-    public function edit($id) {
-        $dkh = $this->dkhModel->getById($id);
-        require_once "../views/dangkyhoc/edit.php";
-    }
+        $input = [
+            'MaSinhVien' => $this->getPost('MaSinhVien'),
+            'MaLopHocPhan' => $this->getPost('MaLopHocPhan'),
+        ];
 
-    public function update($id) {
-         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $this->dkhModel->MaDangKy = $id;
-            $this->dkhModel->MaSinhVien = $_POST['MaSinhVien'] ?? null;
-            $this->dkhModel->MaLopHocPhan = $_POST['MaLopHocPhan'] ?? null;
+        $errors = $this->validate($input, [
+            'MaSinhVien' => 'required',
+            'MaLopHocPhan' => 'required'
+        ]);
 
-            if ($this->dkhModel->update()) {
-                header("Location: index.php?url=DangKyHoc/index");
-            } else {
-                echo "Lỗi cập nhật đăng ký.";
-            }
+        if (!empty($errors)) {
+            $data = $this->buildIndexData(implode(' ', $errors));
+            require_once __DIR__ . '/../views/admin/dangkyhoc/index.php';
+            return;
         }
+
+        $this->dkhModel->MaSinhVien = $input['MaSinhVien'];
+        $this->dkhModel->MaLopHocPhan = $input['MaLopHocPhan'];
+
+        $result = $this->dkhModel->create();
+        if ($result === true) {
+            $this->redirect('DangKyHoc/index');
+        }
+
+        $data = $this->buildIndexData($result);
+        require_once __DIR__ . '/../views/admin/dangkyhoc/index.php';
     }
 
     public function delete($id) {
         $this->dkhModel->MaDangKy = $id;
-        if ($this->dkhModel->delete()) {
-            header("Location: index.php?url=DangKyHoc/index");
-        } else {
-            echo "Lỗi hủy đăng ký.";
+        $result = $this->dkhModel->delete();
+        
+        if ($result !== true) {
+            $data = $this->buildIndexData($result);
+            require_once __DIR__ . '/../views/admin/dangkyhoc/index.php';
+            return;
         }
+        
+        $this->redirect('DangKyHoc/index');
     }
 }
-?>

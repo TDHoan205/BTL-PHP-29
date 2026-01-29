@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -7,6 +7,13 @@
         <i class="fas fa-check me-2"></i>Phê duyệt điểm
     </button>
 </div>
+
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
@@ -197,4 +204,4 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

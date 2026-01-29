@@ -1,10 +1,12 @@
 <?php
+/**
+ * GiangVienModel - Quản lý dữ liệu Giảng viên
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class GiangVienModel {
-    private $conn;
-    private $table_name = "GIANG_VIEN";
+class GiangVienModel extends Model {
+    protected $table_name = "GIANG_VIEN";
+    protected $primaryKey = "MaGiangVien";
 
     public $MaGiangVien;
     public $HoTen;
@@ -16,113 +18,139 @@ class GiangVienModel {
     public $MaKhoa;
     public $TrangThai;
 
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    // Lấy tất cả giảng viên
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Tạo mới giảng viên
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaGiangVien=:MaGiangVien, HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, Email=:Email, SoDienThoai=:SoDienThoai, HocVi=:HocVi, MaKhoa=:MaKhoa, TrangThai=:TrangThai";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->NgaySinh = htmlspecialchars(strip_tags($this->NgaySinh));
-        $this->GioiTinh = htmlspecialchars(strip_tags($this->GioiTinh));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->HocVi = htmlspecialchars(strip_tags($this->HocVi));
-        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
-
-        // bind values
-        $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":NgaySinh", $this->NgaySinh);
-        $stmt->bindParam(":GioiTinh", $this->GioiTinh);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":HocVi", $this->HocVi);
-        $stmt->bindParam(":MaKhoa", $this->MaKhoa);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
-
-        if ($stmt->execute()) {
-            return true;
+    /**
+     * Lấy tất cả giảng viên kèm thông tin khoa
+     */
+    public function readAllWithKhoa() {
+        try {
+            $query = "SELECT gv.*, k.TenKhoa 
+                      FROM {$this->table_name} gv
+                      LEFT JOIN KHOA k ON gv.MaKhoa = k.MaKhoa
+                      ORDER BY gv.HoTen";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithKhoa: " . $e->getMessage());
+            return [];
         }
-        return false;
     }
 
-    // Cập nhật thông tin giảng viên
-    public function update() {
-        $query = "UPDATE " . $this->table_name . " SET HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, Email=:Email, SoDienThoai=:SoDienThoai, HocVi=:HocVi, MaKhoa=:MaKhoa, TrangThai=:TrangThai WHERE MaGiangVien=:MaGiangVien";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->NgaySinh = htmlspecialchars(strip_tags($this->NgaySinh));
-        $this->GioiTinh = htmlspecialchars(strip_tags($this->GioiTinh));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->HocVi = htmlspecialchars(strip_tags($this->HocVi));
-        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
-
-        // bind values
-        $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":NgaySinh", $this->NgaySinh);
-        $stmt->bindParam(":GioiTinh", $this->GioiTinh);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":HocVi", $this->HocVi);
-        $stmt->bindParam(":MaKhoa", $this->MaKhoa);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
-
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
-    }
-
-    // Lấy thông tin một giảng viên theo mã giảng viên
+    /**
+     * Lấy thông tin một giảng viên theo mã
+     */
     public function getById($maGiangVien) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaGiangVien = :MaGiangVien";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaGiangVien", $maGiangVien);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaGiangVien = :MaGiangVien";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaGiangVien", $maGiangVien);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
     }
 
-    // Xóa một giảng viên
+    /**
+     * Tạo mới giảng viên
+     */
+    public function create() {
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaGiangVien=:MaGiangVien, HoTen=:HoTen, NgaySinh=:NgaySinh, 
+                          GioiTinh=:GioiTinh, Email=:Email, SoDienThoai=:SoDienThoai, 
+                          HocVi=:HocVi, MaKhoa=:MaKhoa, TrangThai=:TrangThai";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":NgaySinh", $this->sanitize($this->NgaySinh));
+            $stmt->bindValue(":GioiTinh", $this->sanitize($this->GioiTinh));
+            $stmt->bindValue(":Email", $this->sanitize($this->Email));
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai));
+            $stmt->bindValue(":HocVi", $this->sanitize($this->HocVi));
+            $stmt->bindValue(":MaKhoa", $this->sanitize($this->MaKhoa) ?: null);
+            $stmt->bindValue(":TrangThai", $this->sanitize($this->TrangThai) ?: 'Đang làm việc');
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm giảng viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'GiangVienModel::create');
+        }
+    }
+
+    /**
+     * Cập nhật thông tin giảng viên
+     */
+    public function update() {
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET HoTen=:HoTen, NgaySinh=:NgaySinh, GioiTinh=:GioiTinh, 
+                          Email=:Email, SoDienThoai=:SoDienThoai, HocVi=:HocVi, 
+                          MaKhoa=:MaKhoa, TrangThai=:TrangThai 
+                      WHERE MaGiangVien=:MaGiangVien";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":NgaySinh", $this->sanitize($this->NgaySinh));
+            $stmt->bindValue(":GioiTinh", $this->sanitize($this->GioiTinh));
+            $stmt->bindValue(":Email", $this->sanitize($this->Email));
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai));
+            $stmt->bindValue(":HocVi", $this->sanitize($this->HocVi));
+            $stmt->bindValue(":MaKhoa", $this->sanitize($this->MaKhoa) ?: null);
+            $stmt->bindValue(":TrangThai", $this->sanitize($this->TrangThai));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật giảng viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'GiangVienModel::update');
+        }
+    }
+
+    /**
+     * Xóa giảng viên
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaGiangVien = :MaGiangVien";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        return $stmt->execute();
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaGiangVien = :MaGiangVien";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa giảng viên. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'GiangVienModel::delete');
+        }
     }
 
-    // Tìm kiếm giảng viên theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE HoTen LIKE :criteria OR Email LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    /**
+     * Tìm kiếm giảng viên
+     */
+    public function search($keyword) {
+        try {
+            $query = "SELECT gv.*, k.TenKhoa 
+                      FROM {$this->table_name} gv
+                      LEFT JOIN KHOA k ON gv.MaKhoa = k.MaKhoa
+                      WHERE gv.HoTen LIKE :keyword 
+                         OR gv.Email LIKE :keyword 
+                         OR gv.MaGiangVien LIKE :keyword
+                      ORDER BY gv.HoTen";
+            $stmt = $this->conn->prepare($query);
+            $keyword = "%" . $this->sanitize($keyword) . "%";
+            $stmt->bindParam(":keyword", $keyword);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in search: " . $e->getMessage());
+            return [];
+        }
     }
 }
-
-?>

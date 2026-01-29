@@ -1,97 +1,128 @@
 <?php
+/**
+ * LopHocPhanModel - Quản lý dữ liệu Lớp học phần
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class LopHocPhanModel {
-    private $conn;
-    private $table_name = "LOP_HOC_PHAN";
+class LopHocPhanModel extends Model {
+    protected $table_name = "LOP_HOC_PHAN";
+    protected $primaryKey = "MaLopHocPhan";
 
     public $MaLopHocPhan;
-    public $TenLop;
     public $MaMonHoc;
+    public $MaHocKy;
     public $MaGiangVien;
+    public $PhongHoc;
+    public $SoLuongToiDa;
+    public $TrangThai;
 
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    // Lấy tất cả các lớp học phần
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Tạo mới lớp học phần
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaLopHocPhan=:MaLopHocPhan, MaMonHoc=:MaMonHoc, MaGiangVien=:MaGiangVien, TenLop=:TenLop";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-        $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->TenLop = htmlspecialchars(strip_tags($this->TenLop));
-
-        // bind values
-        $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-        $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":TenLop", $this->TenLop);
-
-        if ($stmt->execute()) {
-            return true;
+    /**
+     * Lấy tất cả lớp học phần kèm thông tin chi tiết
+     */
+    public function readAllWithDetails() {
+        try {
+            $query = "SELECT lhp.*, mh.TenMonHoc, gv.HoTen as TenGV, hk.TenHocKy,
+                      (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSo
+                      FROM {$this->table_name} lhp
+                      LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                      LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
+                      LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                      ORDER BY lhp.MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithDetails: " . $e->getMessage());
+            return [];
         }
-        return false;
     }
 
-    // Lấy thông tin một lớp học phần theo mã
+    /**
+     * Lấy thông tin một lớp học phần theo mã
+     */
     public function getById($maLopHocPhan) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaLopHocPhan = :MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
     }
 
-    // Cập nhật thông tin lớp học phần
+    /**
+     * Tạo mới lớp học phần
+     */
+    public function create() {
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaLopHocPhan=:MaLopHocPhan, MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, 
+                          MaGiangVien=:MaGiangVien, PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc) ?: null);
+            $stmt->bindValue(":MaHocKy", $this->sanitize($this->MaHocKy) ?: null);
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien) ?: null);
+            $stmt->bindValue(":PhongHoc", $this->sanitize($this->PhongHoc) ?: null);
+            $stmt->bindValue(":SoLuongToiDa", (int)($this->SoLuongToiDa ?: 60));
+            $stmt->bindValue(":TrangThai", (int)($this->TrangThai ?? 1));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::create');
+        }
+    }
+
+    /**
+     * Cập nhật lớp học phần
+     */
     public function update() {
-        $query = "UPDATE " . $this->table_name . " SET MaMonHoc=:MaMonHoc, MaGiangVien=:MaGiangVien, TenLop=:TenLop WHERE MaLopHocPhan=:MaLopHocPhan";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, MaGiangVien=:MaGiangVien, 
+                          PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai 
+                      WHERE MaLopHocPhan=:MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-        $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->MaGiangVien = htmlspecialchars(strip_tags($this->MaGiangVien));
-        $this->TenLop = htmlspecialchars(strip_tags($this->TenLop));
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc) ?: null);
+            $stmt->bindValue(":MaHocKy", $this->sanitize($this->MaHocKy) ?: null);
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien) ?: null);
+            $stmt->bindValue(":PhongHoc", $this->sanitize($this->PhongHoc) ?: null);
+            $stmt->bindValue(":SoLuongToiDa", (int)($this->SoLuongToiDa ?: 60));
+            $stmt->bindValue(":TrangThai", (int)($this->TrangThai ?? 1));
 
-        // bind values
-        $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-        $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":MaGiangVien", $this->MaGiangVien);
-        $stmt->bindParam(":TenLop", $this->TenLop);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::update');
         }
-        return false;
     }
 
-    // Xóa lớp học phần
+    /**
+     * Xóa lớp học phần
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaLopHocPhan = :MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
 
-        // sanitize
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-
-        // bind id
-        $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::delete');
         }
-        return false;
     }
 }

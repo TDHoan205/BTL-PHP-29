@@ -23,7 +23,7 @@ class LoaiDiemController {
     }
 
     public function create() {
-        require_once "../views/loaidiem/create.php";
+        require_once "../views/admin/loaidiem/create.php";
     }
 
     public function store() {
@@ -41,7 +41,7 @@ class LoaiDiemController {
 
     public function edit($id) {
         $loaiDiem = $this->loaiDiemModel->getById($id);
-        require_once "../views/loaidiem/edit.php";
+        require_once "../views/admin/loaidiem/edit.php";
     }
 
     public function update($id) {

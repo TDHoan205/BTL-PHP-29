@@ -44,7 +44,7 @@ class ChiTietDiemController {
 
     public function edit($id) {
         $diem = $this->ctDiemModel->getById($id);
-        require_once "../views/chitietdiem/edit.php";
+        require_once "../views/admin/chitietdiem/edit.php";
     }
 
     public function update($id) {

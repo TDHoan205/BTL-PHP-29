@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -7,6 +7,13 @@
         <i class="fas fa-plus me-2"></i>Thêm học kỳ
     </button>
 </div>
+
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
@@ -33,7 +40,7 @@
                         <th>Ngày bắt đầu</th>
                         <th>Ngày kết thúc</th>
                         <th>Trạng thái</th>
-                        <th width="120" class="text-center">Thao tác</th>
+                        <th width="120">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,14 +65,15 @@
                                     <span class="status-inactive">Đã kết thúc</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-center">
-                                <a href="index.php?url=HocKy/edit/<?= $hk['MaHocKy'] ?>" class="btn btn-sm btn-warning me-1">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="index.php?url=HocKy/delete/<?= $hk['MaHocKy'] ?>" 
-                                   class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                            <td>
+                                <div class="action-btns">
+                                    <a href="index.php?url=HocKy/edit/<?= $hk['MaHocKy'] ?>" class="btn-action btn-action-edit" data-tooltip="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="index.php?url=HocKy/delete/<?= $hk['MaHocKy'] ?>" class="btn-action btn-action-delete" data-tooltip="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -106,7 +114,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Năm học</label>
-                        <input type="text" name="NamHoc" class="form-control" placeholder="VD: 2024-2025">
+                        <input type="number" name="NamHoc" class="form-control" placeholder="VD: 2024" min="2000" max="2100">
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -143,4 +151,4 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

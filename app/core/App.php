@@ -1,12 +1,32 @@
 <?php
 class App {
-    // SỬA QUAN TRỌNG: Đổi tên thành HomeController
-    protected $controller = 'HomeController';
+    // Default: Chuyển đến trang đăng nhập
+    protected $controller = 'AuthController';
     protected $method = 'index';
     protected $params = [];
+    
+    // Controllers không cần đăng nhập
+    protected $publicControllers = ['Auth'];
 
     public function __construct() {
         $url = $this->parseUrl();
+        $requestedController = $url[0] ?? 'Auth';
+        
+        // Kiểm tra đăng nhập
+        $isLoggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+        $isPublicController = in_array($requestedController, $this->publicControllers);
+        
+        // Nếu chưa đăng nhập và không phải trang public -> redirect về login
+        if (!$isLoggedIn && !$isPublicController) {
+            header('Location: index.php?url=Auth/index');
+            exit;
+        }
+        
+        // Nếu đã đăng nhập và đang ở trang Auth -> redirect về Home
+        if ($isLoggedIn && $requestedController === 'Auth' && ($url[1] ?? 'index') === 'index') {
+            header('Location: index.php?url=Home/index');
+            exit;
+        }
 
         // Kiểm tra file controller
         if ($url != null && file_exists('../app/controllers/' . ucfirst($url[0]) . 'Controller.php')) {

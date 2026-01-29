@@ -1,10 +1,12 @@
 <?php
+/**
+ * DangKyHocModel - Quản lý đăng ký học
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class DangKyHocModel {
-    private $conn;
-    private $table_name = "DANG_KY_HOC";
+class DangKyHocModel extends Model {
+    protected $table_name = "DANG_KY_HOC";
+    protected $primaryKey = "MaDangKy";
 
     public $MaDangKy;
     public $MaSinhVien;
@@ -16,82 +18,120 @@ class DangKyHocModel {
     public $KetQua;
 
     public function __construct($db) {
-        $this->conn = $db;
+        parent::__construct($db);
     }
 
-    // Lấy tất cả các đăng ký học
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    /**
+     * Lấy tất cả đăng ký học với chi tiết
+     */
+    public function readAllWithDetails() {
+        $query = "SELECT dk.*, sv.HoTen as TenSinhVien, lhp.MaLopHocPhan, mh.TenMonHoc, hk.TenHocKy
+                  FROM {$this->table_name} dk
+                  LEFT JOIN SINH_VIEN sv ON dk.MaSinhVien = sv.MaSinhVien
+                  LEFT JOIN LOP_HOC_PHAN lhp ON dk.MaLopHocPhan = lhp.MaLopHocPhan
+                  LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                  LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                  ORDER BY dk.NgayDangKy DESC";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
     }
 
-    // Lấy thông tin một đăng ký học theo mã
-    public function getById($maDangKy) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaDangKy = :MaDangKy";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaDangKy", $maDangKy);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    /**
+     * Lấy đăng ký học theo lớp học phần
+     */
+    public function getByLopHocPhan($maLopHocPhan) {
+        $query = "SELECT dk.*, sv.HoTen as TenSinhVien
+                  FROM {$this->table_name} dk
+                  JOIN SINH_VIEN sv ON dk.MaSinhVien = sv.MaSinhVien
+                  WHERE dk.MaLopHocPhan = :maLop";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':maLop', $maLopHocPhan);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
     }
 
-    // Tạo mới đăng ký học
+    /**
+     * Kiểm tra sinh viên đã đăng ký lớp học phần chưa
+     */
+    public function isRegistered($maSinhVien, $maLopHocPhan) {
+        $query = "SELECT COUNT(*) as count FROM {$this->table_name} 
+                  WHERE MaSinhVien = :maSV AND MaLopHocPhan = :maLHP";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':maSV', $maSinhVien);
+            $stmt->bindParam(':maLHP', $maLopHocPhan);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['count'] > 0;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Tạo mới đăng ký học
+     */
     public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaDangKy=:MaDangKy, MaSinhVien=:MaSinhVien, MaLopHocPhan=:MaLopHocPhan, NgayDangKy=:NgayDangKy, DiemTongKet=:DiemTongKet, DiemChu=:DiemChu, DiemSo=:DiemSo, KetQua=:KetQua";
-        $stmt = $this->conn->prepare($query);
+        // Kiểm tra đã đăng ký chưa
+        if ($this->isRegistered($this->MaSinhVien, $this->MaLopHocPhan)) {
+            return "Sinh viên đã đăng ký lớp học phần này rồi!";
+        }
 
-        // sanitize
-        $this->MaDangKy = htmlspecialchars(strip_tags($this->MaDangKy));
-        $this->MaSinhVien = htmlspecialchars(strip_tags($this->MaSinhVien));
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-        $this->NgayDangKy = htmlspecialchars(strip_tags($this->NgayDangKy));
-        $this->DiemTongKet = htmlspecialchars(strip_tags($this->DiemTongKet));
-        $this->DiemChu = htmlspecialchars(strip_tags($this->DiemChu));
-        $this->DiemSo = htmlspecialchars(strip_tags($this->DiemSo));
-        $this->KetQua = htmlspecialchars(strip_tags($this->KetQua));
-
-        // bind values
-        $stmt->bindParam(":MaDangKy", $this->MaDangKy);
-        $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-        $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-        $stmt->bindParam(":NgayDangKy", $this->NgayDangKy);
-        $stmt->bindParam(":DiemTongKet", $this->DiemTongKet);
-        $stmt->bindParam(":DiemChu", $this->DiemChu);
-        $stmt->bindParam(":DiemSo", $this->DiemSo);
-        $stmt->bindParam(":KetQua", $this->KetQua);
-
-        return $stmt->execute();
+        $query = "INSERT INTO {$this->table_name} (MaSinhVien, MaLopHocPhan, NgayDangKy) 
+                  VALUES (:MaSinhVien, :MaLopHocPhan, NOW())";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
+            $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
+            $stmt->execute();
+            return true;
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e);
+        }
     }
 
-    // Cập nhật đăng ký học
-    public function update() {
-        $query = "UPDATE " . $this->table_name . " SET MaSinhVien=:MaSinhVien, MaLopHocPhan=:MaLopHocPhan, NgayDangKy=:NgayDangKy, DiemTongKet=:DiemTongKet, DiemChu=:DiemChu, DiemSo=:DiemSo, KetQua=:KetQua WHERE MaDangKy=:MaDangKy";
-        $stmt = $this->conn->prepare($query);
-        $this->MaDangKy = htmlspecialchars(strip_tags($this->MaDangKy));
-        $this->MaSinhVien = htmlspecialchars(strip_tags($this->MaSinhVien));
-        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
-        $this->NgayDangKy = htmlspecialchars(strip_tags($this->NgayDangKy));
-        $this->DiemTongKet = htmlspecialchars(strip_tags($this->DiemTongKet));
-        $this->DiemChu = htmlspecialchars(strip_tags($this->DiemChu));
-        $this->DiemSo = htmlspecialchars(strip_tags($this->DiemSo));
-        $this->KetQua = htmlspecialchars(strip_tags($this->KetQua));
-        $stmt->bindParam(":MaDangKy", $this->MaDangKy);
-        $stmt->bindParam(":MaSinhVien", $this->MaSinhVien);
-        $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-        $stmt->bindParam(":NgayDangKy", $this->NgayDangKy);
-        $stmt->bindParam(":DiemTongKet", $this->DiemTongKet);
-        $stmt->bindParam(":DiemChu", $this->DiemChu);
-        $stmt->bindParam(":DiemSo", $this->DiemSo);
-        $stmt->bindParam(":KetQua", $this->KetQua);
-        return $stmt->execute();
+    /**
+     * Cập nhật điểm
+     */
+    public function updateDiem() {
+        $query = "UPDATE {$this->table_name} 
+                  SET DiemTongKet=:DiemTongKet, DiemChu=:DiemChu, DiemSo=:DiemSo, KetQua=:KetQua 
+                  WHERE MaDangKy=:MaDangKy";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaDangKy", $this->MaDangKy);
+            $stmt->bindParam(":DiemTongKet", $this->DiemTongKet);
+            $stmt->bindParam(":DiemChu", $this->DiemChu);
+            $stmt->bindParam(":DiemSo", $this->DiemSo);
+            $stmt->bindParam(":KetQua", $this->KetQua);
+            $stmt->execute();
+            return true;
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e);
+        }
     }
 
-    // Xóa đăng ký học
+    /**
+     * Xóa đăng ký học
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaDangKy = :MaDangKy";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaDangKy", $this->MaDangKy);
-        return $stmt->execute();
+        $query = "DELETE FROM {$this->table_name} WHERE MaDangKy = :MaDangKy";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaDangKy", $this->MaDangKy);
+            $stmt->execute();
+            return true;
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e);
+        }
     }
 }

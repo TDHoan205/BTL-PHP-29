@@ -1,4 +1,4 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -7,6 +7,21 @@
         <i class="fas fa-plus me-2"></i>Thêm giảng viên
     </button>
 </div>
+
+<!-- Error/Success Messages -->
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($data['success'])): ?>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($data['success']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
@@ -55,11 +70,11 @@
                             <td><span class="badge bg-info-light"><?= $gv['MaKhoa'] ?? '' ?></span></td>
                             <td><?= $gv['HocVi'] ?? '' ?></td>
                             <td>
-                                <div class="table-actions">
-                                    <a href="index.php?url=GiangVien/edit/<?= $gv['MaGiangVien'] ?>" class="btn btn-sm btn-warning btn-action" title="Sửa">
+                                <div class="action-btns">
+                                    <a href="index.php?url=GiangVien/edit/<?= $gv['MaGiangVien'] ?>" class="btn-action btn-action-edit" data-tooltip="Sửa">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="index.php?url=GiangVien/delete/<?= $gv['MaGiangVien'] ?>" class="btn btn-sm btn-danger btn-action" title="Xóa" onclick="return confirm('Bạn có chắc muốn xóa?')">
+                                    <a href="index.php?url=GiangVien/delete/<?= $gv['MaGiangVien'] ?>" class="btn-action btn-action-delete" data-tooltip="Xóa" onclick="return confirm('Bạn có chắc muốn xóa?')">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 </div>
@@ -128,8 +143,8 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Khoa</label>
-                            <select name="MaKhoa" class="form-select">
+                            <label class="form-label">Khoa <span class="text-danger">*</span></label>
+                            <select name="MaKhoa" class="form-select" required>
                                 <option value="">-- Chọn khoa --</option>
                                 <?php if(isset($data['khoas'])): ?>
                                     <?php foreach($data['khoas'] as $khoa): ?>
@@ -148,10 +163,6 @@
                                 <option value="Giáo sư">Giáo sư</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Địa chỉ</label>
-                        <input type="text" name="DiaChi" class="form-control">
                     </div>
                 </div>
                 <div class="modal-footer">

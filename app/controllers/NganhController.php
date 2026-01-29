@@ -1,71 +1,141 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/NganhModel.php';
+/**
+ * NganhController - Quản lý Ngành
+ */
+require_once __DIR__ . '/../core/Controller.php';
 
-class NganhController {
-    private $db;
+class NganhController extends Controller {
     private $nganhModel;
+    private $khoaModel;
 
     public function __construct() {
-        $database = new Database();
-        $this->db = $database->getConnection();
-            $this->nganhModel = new NganhModel($this->db);
+        parent::__construct();
+        $this->nganhModel = $this->model('NganhModel');
+        $this->khoaModel = $this->model('KhoaModel');
+    }
+
+    private function buildIndexData($error = '', $success = '') {
+        return [
+            'nganhs' => $this->nganhModel->readAll(),
+            'khoas' => $this->khoaModel->readAll(),
+            'pageTitle' => 'Quản lý Ngành',
+            'breadcrumb' => 'Ngành',
+            'error' => $error,
+            'success' => $success
+        ];
     }
 
     public function index() {
-        $nganhs = $this->nganhModel->readAll();
-        $data = [
-            'nganhs' => $nganhs,
-            'pageTitle' => 'Quản lý Ngành',
-            'breadcrumb' => 'Ngành'
-        ];
-        require_once "../app/views/nganh/index.php";
-    }
-
-    public function create() {
-        require_once "../views/nganh/create.php";
+        $data = $this->buildIndexData();
+        require_once __DIR__ . '/../views/admin/nganh/index.php';
     }
 
     public function store() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $this->nganhModel->MaNganh = $_POST['MaNganh'] ?? null;
-            $this->nganhModel->TenNganh = $_POST['TenNganh'] ?? null;
-            $this->nganhModel->MaKhoa = $_POST['MaKhoa'] ?? null;
-
-            if ($this->nganhModel->create()) {
-                header("Location: index.php?url=Nganh/index");
-            } else {
-                echo "Lỗi thêm ngành.";
-            }
+        if (!$this->isPost()) {
+            $this->redirect('Nganh/index');
         }
+
+        $input = [
+            'MaNganh' => $this->getPost('MaNganh'),
+            'TenNganh' => $this->getPost('TenNganh'),
+            'MaKhoa' => $this->getPost('MaKhoa'),
+        ];
+
+        $errors = $this->validate($input, [
+            'MaNganh' => 'required|max:20',
+            'TenNganh' => 'required|max:100'
+        ]);
+
+        if (!empty($errors)) {
+            $data = $this->buildIndexData(implode(' ', $errors));
+            require_once __DIR__ . '/../views/admin/nganh/index.php';
+            return;
+        }
+
+        $this->nganhModel->MaNganh = $input['MaNganh'];
+        $this->nganhModel->TenNganh = $input['TenNganh'];
+        $this->nganhModel->MaKhoa = $input['MaKhoa'] ?: null;
+
+        $result = $this->nganhModel->create();
+        if ($result === true) {
+            $this->redirect('Nganh/index');
+        }
+
+        $data = $this->buildIndexData($result);
+        require_once __DIR__ . '/../views/admin/nganh/index.php';
     }
 
     public function edit($id) {
         $nganh = $this->nganhModel->getById($id);
-        require_once "../views/nganh/edit.php";
+        if (!$nganh) {
+            $this->redirect('Nganh/index');
+        }
+
+        $data = [
+            'nganh' => $nganh,
+            'khoas' => $this->khoaModel->readAll(),
+            'pageTitle' => 'Sửa ngành',
+            'breadcrumb' => 'Sửa ngành',
+            'error' => ''
+        ];
+        require_once __DIR__ . '/../views/admin/nganh/edit.php';
     }
 
     public function update($id) {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $this->nganhModel->MaNganh = $id;
-            $this->nganhModel->TenNganh = $_POST['TenNganh'] ?? null;
-            $this->nganhModel->MaKhoa = $_POST['MaKhoa'] ?? null;
-
-            if ($this->nganhModel->update()) {
-                header("Location: index.php?url=Nganh/index");
-            } else {
-                echo "Lỗi cập nhật ngành.";
-            }
+        if (!$this->isPost()) {
+            $this->redirect('Nganh/index');
         }
+
+        $input = [
+            'TenNganh' => $this->getPost('TenNganh'),
+            'MaKhoa' => $this->getPost('MaKhoa'),
+        ];
+
+        $errors = $this->validate($input, [
+            'TenNganh' => 'required|max:100'
+        ]);
+
+        if (!empty($errors)) {
+            $data = [
+                'nganh' => array_merge(['MaNganh' => $id], $input),
+                'khoas' => $this->khoaModel->readAll(),
+                'pageTitle' => 'Sửa ngành',
+                'breadcrumb' => 'Sửa ngành',
+                'error' => implode(' ', $errors)
+            ];
+            require_once __DIR__ . '/../views/admin/nganh/edit.php';
+            return;
+        }
+
+        $this->nganhModel->MaNganh = $id;
+        $this->nganhModel->TenNganh = $input['TenNganh'];
+        $this->nganhModel->MaKhoa = $input['MaKhoa'] ?: null;
+
+        $result = $this->nganhModel->update();
+        if ($result === true) {
+            $this->redirect('Nganh/index');
+        }
+
+        $data = [
+            'nganh' => array_merge(['MaNganh' => $id], $input),
+            'khoas' => $this->khoaModel->readAll(),
+            'pageTitle' => 'Sửa ngành',
+            'breadcrumb' => 'Sửa ngành',
+            'error' => $result
+        ];
+        require_once __DIR__ . '/../views/admin/nganh/edit.php';
     }
 
     public function delete($id) {
         $this->nganhModel->MaNganh = $id;
-        if ($this->nganhModel->delete()) {
-            header("Location: index.php?url=Nganh/index");
-        } else {
-            echo "Lỗi xóa ngành.";
+        $result = $this->nganhModel->delete();
+        
+        if ($result !== true) {
+            $data = $this->buildIndexData($result);
+            require_once __DIR__ . '/../views/admin/nganh/index.php';
+            return;
         }
+        
+        $this->redirect('Nganh/index');
     }
 }
-?>

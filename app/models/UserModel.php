@@ -1,10 +1,12 @@
 <?php
+/**
+ * UserModel - Quản lý dữ liệu Người dùng
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class UserModel {
-    private $conn;
-    private $table_name = "USER";
+class UserModel extends Model {
+    protected $table_name = "USER";
+    protected $primaryKey = "MaUser";
 
     public $MaUser;
     public $TenDangNhap;
@@ -17,107 +19,154 @@ class UserModel {
     public $NgayTao;
     public $NgayCapNhat;
 
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    // Lấy tất cả người dùng
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Lấy thông tin một người dùng theo ID
+    /**
+     * Lấy thông tin một người dùng theo ID
+     */
     public function getById($userId) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaUser = :MaUser";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaUser", $userId);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaUser", $userId);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
     }
 
-    // Tạo mới người dùng
+    /**
+     * Lấy thông tin người dùng theo tên đăng nhập
+     */
+    public function getByUsername($username) {
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE TenDangNhap = :TenDangNhap";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":TenDangNhap", $username);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getByUsername: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Tạo mới người dùng
+     */
     public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET TenDangNhap=:TenDangNhap, MatKhau=:MatKhau, HoTen=:HoTen, Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, TrangThai=:TrangThai, NgayTao=:NgayTao, NgayCapNhat=:NgayCapNhat";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET TenDangNhap=:TenDangNhap, MatKhau=:MatKhau, HoTen=:HoTen, 
+                          Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, 
+                          TrangThai=:TrangThai, NgayTao=:NgayTao, NgayCapNhat=:NgayCapNhat";
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->TenDangNhap = htmlspecialchars(strip_tags($this->TenDangNhap));
-        $this->MatKhau = htmlspecialchars(strip_tags($this->MatKhau));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->VaiTro = htmlspecialchars(strip_tags($this->VaiTro));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
-        $this->NgayTao = htmlspecialchars(strip_tags($this->NgayTao));
-        $this->NgayCapNhat = htmlspecialchars(strip_tags($this->NgayCapNhat));
+            // Hash password nếu chưa được hash
+            $password = $this->MatKhau;
+            if (strpos($password, '$2y$') !== 0 && strpos($password, '$2a$') !== 0) {
+                $password = password_hash($password, PASSWORD_DEFAULT);
+            }
 
-        // bind values
-        $stmt->bindParam(":TenDangNhap", $this->TenDangNhap);
-        $stmt->bindParam(":MatKhau", $this->MatKhau);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":VaiTro", $this->VaiTro);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
-        $stmt->bindParam(":NgayTao", $this->NgayTao);
-        $stmt->bindParam(":NgayCapNhat", $this->NgayCapNhat);
+            $stmt->bindValue(":TenDangNhap", $this->sanitize($this->TenDangNhap));
+            $stmt->bindValue(":MatKhau", $password);
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
+            $stmt->bindValue(":VaiTro", $this->sanitize($this->VaiTro) ?: 'user');
+            $stmt->bindValue(":TrangThai", $this->sanitize($this->TrangThai) ?: 'Hoạt động');
+            $stmt->bindValue(":NgayTao", date('Y-m-d H:i:s'));
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
 
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể tạo người dùng. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'UserModel::create');
         }
-        return false;
     }
 
-    // Cập nhật người dùng
+    /**
+     * Cập nhật người dùng
+     */
     public function update() {
-        $query = "UPDATE " . $this->table_name . " SET TenDangNhap=:TenDangNhap, MatKhau=:MatKhau, HoTen=:HoTen, Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, TrangThai=:TrangThai, NgayCapNhat=:NgayCapNhat WHERE MaUser=:MaUser";
-        $stmt = $this->conn->prepare($query);
+        try {
+            // Kiểm tra nếu có cập nhật mật khẩu
+            if (!empty($this->MatKhau)) {
+                $query = "UPDATE {$this->table_name} 
+                          SET TenDangNhap=:TenDangNhap, MatKhau=:MatKhau, HoTen=:HoTen, 
+                              Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, 
+                              TrangThai=:TrangThai, NgayCapNhat=:NgayCapNhat 
+                          WHERE MaUser=:MaUser";
+            } else {
+                $query = "UPDATE {$this->table_name} 
+                          SET TenDangNhap=:TenDangNhap, HoTen=:HoTen, 
+                              Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, 
+                              TrangThai=:TrangThai, NgayCapNhat=:NgayCapNhat 
+                          WHERE MaUser=:MaUser";
+            }
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->MaUser = htmlspecialchars(strip_tags($this->MaUser));
-        $this->TenDangNhap = htmlspecialchars(strip_tags($this->TenDangNhap));
-        $this->MatKhau = htmlspecialchars(strip_tags($this->MatKhau));
-        $this->HoTen = htmlspecialchars(strip_tags($this->HoTen));
-        $this->Email = htmlspecialchars(strip_tags($this->Email));
-        $this->SoDienThoai = htmlspecialchars(strip_tags($this->SoDienThoai));
-        $this->VaiTro = htmlspecialchars(strip_tags($this->VaiTro));
-        $this->TrangThai = htmlspecialchars(strip_tags($this->TrangThai));
-        $this->NgayCapNhat = htmlspecialchars(strip_tags($this->NgayCapNhat));
+            $stmt->bindValue(":MaUser", (int)$this->MaUser);
+            $stmt->bindValue(":TenDangNhap", $this->sanitize($this->TenDangNhap));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
+            $stmt->bindValue(":VaiTro", $this->sanitize($this->VaiTro) ?: 'user');
+            $stmt->bindValue(":TrangThai", $this->sanitize($this->TrangThai) ?: 'Hoạt động');
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
 
-        // bind values
-        $stmt->bindParam(":MaUser", $this->MaUser);
-        $stmt->bindParam(":TenDangNhap", $this->TenDangNhap);
-        $stmt->bindParam(":MatKhau", $this->MatKhau);
-        $stmt->bindParam(":HoTen", $this->HoTen);
-        $stmt->bindParam(":Email", $this->Email);
-        $stmt->bindParam(":SoDienThoai", $this->SoDienThoai);
-        $stmt->bindParam(":VaiTro", $this->VaiTro);
-        $stmt->bindParam(":TrangThai", $this->TrangThai);
-        $stmt->bindParam(":NgayCapNhat", $this->NgayCapNhat);
+            if (!empty($this->MatKhau)) {
+                $password = $this->MatKhau;
+                if (strpos($password, '$2y$') !== 0 && strpos($password, '$2a$') !== 0) {
+                    $password = password_hash($password, PASSWORD_DEFAULT);
+                }
+                $stmt->bindValue(":MatKhau", $password);
+            }
 
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật người dùng. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'UserModel::update');
         }
-        return false;
     }
 
-    // Xóa người dùng
+    /**
+     * Xóa người dùng
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaUser = :MaUser";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaUser", (int)$this->MaUser);
 
-        // sanitize
-        $this->MaUser = htmlspecialchars(strip_tags($this->MaUser));
-
-        // bind id
-        $stmt->bindParam(":MaUser", $this->MaUser);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa người dùng. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'UserModel::delete');
         }
-        return false;
+    }
+
+    /**
+     * Xác thực người dùng
+     */
+    public function authenticate($username, $password) {
+        $user = $this->getByUsername($username);
+        if (!$user) {
+            return false;
+        }
+
+        $stored = $user['MatKhau'] ?? '';
+        // Kiểm tra mật khẩu (hỗ trợ cả hash và plain text)
+        $verify = (strpos($stored, '$2y$') === 0 || strpos($stored, '$2a$') === 0)
+            ? password_verify($password, $stored)
+            : ($stored === $password);
+
+        return $verify ? $user : false;
     }
 }

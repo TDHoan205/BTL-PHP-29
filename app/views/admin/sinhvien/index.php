@@ -1,17 +1,21 @@
-<?php require_once '../app/views/layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
 <!-- Page Header -->
 <div class="page-header">
     <h4><i class="fas fa-user-graduate me-2"></i>Quản lý Sinh viên</h4>
     <div>
-        <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal">
-            <i class="fas fa-file-excel me-2"></i>Import Excel
-        </button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
             <i class="fas fa-plus me-2"></i>Thêm sinh viên
         </button>
     </div>
 </div>
+
+<?php if (!empty($data['error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($data['error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
@@ -66,11 +70,11 @@
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="table-actions">
-                                    <a href="index.php?url=SinhVien/edit/<?= $sv['MaSinhVien'] ?>" class="btn btn-sm btn-warning btn-action" title="Sửa">
+                                <div class="action-btns">
+                                    <a href="index.php?url=SinhVien/edit/<?= $sv['MaSinhVien'] ?>" class="btn-action btn-action-edit" data-tooltip="Sửa">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="index.php?url=SinhVien/delete/<?= $sv['MaSinhVien'] ?>" class="btn btn-sm btn-danger btn-action" title="Xóa" onclick="return confirm('Bạn có chắc muốn xóa?')">
+                                    <a href="index.php?url=SinhVien/delete/<?= $sv['MaSinhVien'] ?>" class="btn-action btn-action-delete" data-tooltip="Xóa" onclick="return confirm('Bạn có chắc muốn xóa?')">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 </div>
@@ -143,8 +147,8 @@
                             <input type="text" name="DiaChi" class="form-control">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Lớp hành chính</label>
-                            <select name="MaLop" class="form-select">
+                            <label class="form-label">Lớp hành chính <span class="text-danger">*</span></label>
+                            <select name="MaLop" class="form-select" required>
                                 <option value="">-- Chọn lớp --</option>
                                 <?php if(isset($data['lops'])): ?>
                                     <?php foreach($data['lops'] as $lop): ?>
@@ -173,28 +177,6 @@
     </div>
 </div>
 
-<!-- Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-file-excel me-2"></i>Import từ Excel</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="index.php?url=SinhVien/import" method="POST" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <p class="text-muted">Chọn file Excel (.xlsx) chứa danh sách sinh viên.</p>
-                    <input type="file" name="file_excel" class="form-control" accept=".xlsx,.xls" required>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-success"><i class="fas fa-upload me-2"></i>Upload</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
 document.getElementById('searchInput').addEventListener('keyup', function() {
     let filter = this.value.toLowerCase();
@@ -206,4 +188,4 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 </script>
 
-<?php require_once '../app/views/layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

@@ -1,10 +1,12 @@
 <?php
+/**
+ * MonHocModel - Quản lý dữ liệu Môn học
+ */
+require_once __DIR__ . '/../core/Model.php';
 
-require_once __DIR__ . '/../config/Database.php';
-
-class MonHocModel {
-    private $conn;
-    private $table_name = "MON_HOC";
+class MonHocModel extends Model {
+    protected $table_name = "MON_HOC";
+    protected $primaryKey = "MaMonHoc";
 
     public $MaMonHoc;
     public $TenMonHoc;
@@ -13,95 +15,108 @@ class MonHocModel {
     public $SoTietThucHanh;
     public $MaNganh;
 
-    public function __construct($db) {
-        $this->conn = $db;
+    /**
+     * Lấy tất cả môn học kèm thông tin ngành
+     */
+    public function readAllWithNganh() {
+        try {
+            $query = "SELECT mh.*, n.TenNganh 
+                      FROM {$this->table_name} mh
+                      LEFT JOIN NGANH n ON mh.MaNganh = n.MaNganh
+                      ORDER BY mh.TenMonHoc";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithNganh: " . $e->getMessage());
+            return [];
+        }
     }
 
-    // Lấy tất cả các môn học
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Lấy thông tin một môn học theo mã
+    /**
+     * Lấy thông tin một môn học theo mã
+     */
     public function getById($maMonHoc) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaMonHoc = :MaMonHoc";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaMonHoc", $maMonHoc);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE MaMonHoc = :MaMonHoc";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaMonHoc", $maMonHoc);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
     }
 
-    // Tạo mới môn học
+    /**
+     * Tạo mới môn học
+     */
     public function create() {
-        $query = "INSERT INTO " . $this->table_name . " SET MaMonHoc=:MaMonHoc, TenMonHoc=:TenMonHoc, SoTinChi=:SoTinChi, SoTietLyThuyet=:SoTietLyThuyet, SoTietThucHanh=:SoTietThucHanh, MaNganh=:MaNganh";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaMonHoc=:MaMonHoc, TenMonHoc=:TenMonHoc, SoTinChi=:SoTinChi, 
+                          SoTietLyThuyet=:SoTietLyThuyet, SoTietThucHanh=:SoTietThucHanh, MaNganh=:MaNganh";
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->TenMonHoc = htmlspecialchars(strip_tags($this->TenMonHoc));
-        $this->SoTinChi = htmlspecialchars(strip_tags($this->SoTinChi));
-        $this->SoTietLyThuyet = htmlspecialchars(strip_tags($this->SoTietLyThuyet));
-        $this->SoTietThucHanh = htmlspecialchars(strip_tags($this->SoTietThucHanh));
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc));
+            $stmt->bindValue(":TenMonHoc", $this->sanitize($this->TenMonHoc));
+            $stmt->bindValue(":SoTinChi", (int)$this->SoTinChi ?: null);
+            $stmt->bindValue(":SoTietLyThuyet", (int)$this->SoTietLyThuyet ?: null);
+            $stmt->bindValue(":SoTietThucHanh", (int)$this->SoTietThucHanh ?: null);
+            $stmt->bindValue(":MaNganh", $this->sanitize($this->MaNganh) ?: null);
 
-        // bind values
-        $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":TenMonHoc", $this->TenMonHoc);
-        $stmt->bindParam(":SoTinChi", $this->SoTinChi);
-        $stmt->bindParam(":SoTietLyThuyet", $this->SoTietLyThuyet);
-        $stmt->bindParam(":SoTietThucHanh", $this->SoTietThucHanh);
-        $stmt->bindParam(":MaNganh", $this->MaNganh);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm môn học. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'MonHocModel::create');
         }
-        return false;
     }
 
-    // Cập nhật môn học
+    /**
+     * Cập nhật môn học
+     */
     public function update() {
-        $query = "UPDATE " . $this->table_name . " SET TenMonHoc=:TenMonHoc, SoTinChi=:SoTinChi, SoTietLyThuyet=:SoTietLyThuyet, SoTietThucHanh=:SoTietThucHanh, MaNganh=:MaNganh WHERE MaMonHoc=:MaMonHoc";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET TenMonHoc=:TenMonHoc, SoTinChi=:SoTinChi, 
+                          SoTietLyThuyet=:SoTietLyThuyet, SoTietThucHanh=:SoTietThucHanh, MaNganh=:MaNganh 
+                      WHERE MaMonHoc=:MaMonHoc";
+            $stmt = $this->conn->prepare($query);
 
-        // sanitize
-        $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-        $this->TenMonHoc = htmlspecialchars(strip_tags($this->TenMonHoc));
-        $this->SoTinChi = htmlspecialchars(strip_tags($this->SoTinChi));
-        $this->SoTietLyThuyet = htmlspecialchars(strip_tags($this->SoTietLyThuyet));
-        $this->SoTietThucHanh = htmlspecialchars(strip_tags($this->SoTietThucHanh));
-        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc));
+            $stmt->bindValue(":TenMonHoc", $this->sanitize($this->TenMonHoc));
+            $stmt->bindValue(":SoTinChi", (int)$this->SoTinChi ?: null);
+            $stmt->bindValue(":SoTietLyThuyet", (int)$this->SoTietLyThuyet ?: null);
+            $stmt->bindValue(":SoTietThucHanh", (int)$this->SoTietThucHanh ?: null);
+            $stmt->bindValue(":MaNganh", $this->sanitize($this->MaNganh) ?: null);
 
-        // bind values
-        $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-        $stmt->bindParam(":TenMonHoc", $this->TenMonHoc);
-        $stmt->bindParam(":SoTinChi", $this->SoTinChi);
-        $stmt->bindParam(":SoTietLyThuyet", $this->SoTietLyThuyet);
-        $stmt->bindParam(":SoTietThucHanh", $this->SoTietThucHanh);
-        $stmt->bindParam(":MaNganh", $this->MaNganh);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật môn học. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'MonHocModel::update');
         }
-        return false;
     }
 
-    // Xóa môn học
+    /**
+     * Xóa môn học
+     */
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE MaMonHoc = :MaMonHoc";
-        $stmt = $this->conn->prepare($query);
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaMonHoc = :MaMonHoc";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc));
 
-        // sanitize
-        $this->MaMonHoc = htmlspecialchars(strip_tags($this->MaMonHoc));
-
-        // bind id
-        $stmt->bindParam(":MaMonHoc", $this->MaMonHoc);
-
-        if ($stmt->execute()) {
-            return true;
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa môn học. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'MonHocModel::delete');
         }
-        return false;
     }
 }
