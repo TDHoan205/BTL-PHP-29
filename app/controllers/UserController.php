@@ -1,62 +1,83 @@
 <?php
-
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/UserModel.php';
 
 class UserController {
-
     private $db;
     private $userModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->userModel = new User($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+            $this->userModel = new UserModel($this->db);
     }
 
-    // Lấy danh sách tất cả người dùng
-    public function getAllUsers() {
-        return $this->userModel->readAll();
+    public function index() {
+        $users = $this->userModel->readAll();
+        $data = [
+            'users' => $users,
+            'pageTitle' => 'Quản lý Tài khoản',
+            'breadcrumb' => 'Tài khoản'
+        ];
+        require_once "../app/views/user/index.php";
     }
 
-    // Lấy thông tin một người dùng theo ID
-    public function getUserById($userId) {
-        return $this->userModel->getById($userId);
+    public function create() {
+        require_once "../app/views/user/create.php";
     }
 
-    // Thêm một người dùng mới
-    public function addUser($data) {
-        $this->userModel->MaUser = $data['MaUser'];
-        $this->userModel->TenDangNhap = $data['TenDangNhap'];
-        $this->userModel->MatKhau = $data['MatKhau'];
-        $this->userModel->HoTen = $data['HoTen'];
-        $this->userModel->Email = $data['Email'];
-        $this->userModel->SoDienThoai = $data['SoDienThoai'];
-        $this->userModel->VaiTro = $data['VaiTro'];
-        $this->userModel->TrangThai = $data['TrangThai'];
-        $this->userModel->NgayTao = $data['NgayTao'];
-        $this->userModel->NgayCapNhat = $data['NgayCapNhat'];
-        return $this->userModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->userModel->TenDangNhap = $_POST['TenDangNhap'] ?? null;
+            $this->userModel->MatKhau = $_POST['MatKhau'] ?? null; // Lưu ý: Nên mã hóa (hash) mật khẩu trước khi lưu
+            $this->userModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->userModel->Email = $_POST['Email'] ?? null;
+            $this->userModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->userModel->VaiTro = $_POST['VaiTro'] ?? null;
+            $this->userModel->TrangThai = $_POST['TrangThai'] ?? 1;
+            $this->userModel->NgayTao = date('Y-m-d H:i:s');
+            $this->userModel->NgayCapNhat = date('Y-m-d H:i:s');
+
+            if ($this->userModel->create()) {
+                header("Location: index.php?url=User/index");
+            } else {
+                echo "Lỗi thêm người dùng.";
+            }
+        }
     }
 
-    // Cập nhật thông tin người dùng
-    public function updateUser($userId, $data) {
-        $this->userModel->MaUser = $userId;
-        $this->userModel->TenDangNhap = $data['TenDangNhap'];
-        $this->userModel->MatKhau = $data['MatKhau'];
-        $this->userModel->HoTen = $data['HoTen'];
-        $this->userModel->Email = $data['Email'];
-        $this->userModel->SoDienThoai = $data['SoDienThoai'];
-        $this->userModel->VaiTro = $data['VaiTro'];
-        $this->userModel->TrangThai = $data['TrangThai'];
-        $this->userModel->NgayCapNhat = $data['NgayCapNhat'];
-        return $this->userModel->update();
+    public function edit($id) {
+        $user = $this->userModel->getById($id);
+        require_once "../views/user/edit.php";
     }
 
-    // Xóa một người dùng
-    public function deleteUser($userId) {
-        $this->userModel->MaUser = $userId;
-        return $this->userModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->userModel->MaUser = $id;
+            $this->userModel->TenDangNhap = $_POST['TenDangNhap'] ?? null;
+            $this->userModel->MatKhau = $_POST['MatKhau'] ?? null;
+            $this->userModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->userModel->Email = $_POST['Email'] ?? null;
+            $this->userModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->userModel->VaiTro = $_POST['VaiTro'] ?? null;
+            $this->userModel->TrangThai = $_POST['TrangThai'] ?? null;
+            $this->userModel->NgayCapNhat = date('Y-m-d H:i:s');
+
+            if ($this->userModel->update()) {
+                header("Location: index.php?url=User/index");
+            } else {
+                echo "Lỗi cập nhật người dùng.";
+            }
+        }
+    }
+
+    public function delete($id) {
+        $this->userModel->MaUser = $id;
+        if ($this->userModel->delete()) {
+            header("Location: index.php?url=User/index");
+        } else {
+            echo "Lỗi xóa người dùng.";
+        }
     }
 }
-
 ?>

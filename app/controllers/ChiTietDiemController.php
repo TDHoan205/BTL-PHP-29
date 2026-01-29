@@ -1,56 +1,76 @@
 <?php
-
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/ChiTietDiem.php';
+require_once __DIR__ . '/../models/ChiTietDiemModel.php';
 
 class ChiTietDiemController {
-
     private $db;
-    private $chiTietDiemModel;
+    private $ctDiemModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->chiTietDiemModel = new ChiTietDiem($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->ctDiemModel = new ChiTietDiemModel($this->db);
     }
 
-    // Lấy danh sách tất cả các chi tiết điểm
-    public function getAllChiTietDiem() {
-        return $this->chiTietDiemModel->readAll();
+    public function index() {
+        $chitietdiems = $this->ctDiemModel->readAll();
+        $data = [
+            'chitietdiems' => $chitietdiems,
+            'pageTitle' => 'Chi tiết điểm',
+            'breadcrumb' => 'Chi tiết điểm'
+        ];
+        require_once "../app/views/chitietdiem/index.php";
     }
 
-    // Lấy thông tin một chi tiết điểm theo mã
-    public function getChiTietDiemById($maChiTiet) {
-        return $this->chiTietDiemModel->getById($maChiTiet);
+    public function create() {
+        require_once "../app/views/chitietdiem/create.php";
     }
 
-    // Thêm một chi tiết điểm mới
-    public function addChiTietDiem($data) {
-        $this->chiTietDiemModel->MaChiTiet = $data['MaChiTiet'];
-        $this->chiTietDiemModel->MaSinhVien = $data['MaSinhVien'];
-        $this->chiTietDiemModel->MaMonHoc = $data['MaMonHoc'];
-        $this->chiTietDiemModel->Diem = $data['Diem'];
-        return $this->chiTietDiemModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->ctDiemModel->MaDangKy = $_POST['MaDangKy'] ?? null;
+            $this->ctDiemModel->MaLoaiDiem = $_POST['MaLoaiDiem'] ?? null;
+            $this->ctDiemModel->SoDiem = $_POST['SoDiem'] ?? null;
+            $this->ctDiemModel->NgayNhap = $_POST['NgayNhap'] ?? date('Y-m-d');
+            $this->ctDiemModel->NguoiNhap = $_POST['NguoiNhap'] ?? 'System';
+
+            if ($this->ctDiemModel->create()) {
+                header("Location: index.php?url=ChiTietDiem/index");
+            } else {
+                echo "Lỗi nhập điểm.";
+            }
+        }
     }
 
-    // Cập nhật thông tin chi tiết điểm
-    public function updateChiTietDiem($maChiTiet, $data) {
-        $this->chiTietDiemModel->MaChiTiet = $maChiTiet;
-        $this->chiTietDiemModel->MaSinhVien = $data['MaSinhVien'];
-        $this->chiTietDiemModel->MaMonHoc = $data['MaMonHoc'];
-        $this->chiTietDiemModel->Diem = $data['Diem'];
-        return $this->chiTietDiemModel->update();
+    public function edit($id) {
+        $diem = $this->ctDiemModel->getById($id);
+        require_once "../views/chitietdiem/edit.php";
     }
 
-    // Xóa một chi tiết điểm
-    public function deleteChiTietDiem($maChiTiet) {
-        $this->chiTietDiemModel->MaChiTiet = $maChiTiet;
-        return $this->chiTietDiemModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->ctDiemModel->MaChiTiet = $id;
+            $this->ctDiemModel->MaDangKy = $_POST['MaDangKy'] ?? null;
+            $this->ctDiemModel->MaLoaiDiem = $_POST['MaLoaiDiem'] ?? null;
+            $this->ctDiemModel->SoDiem = $_POST['SoDiem'] ?? null;
+            $this->ctDiemModel->NgayNhap = $_POST['NgayNhap'] ?? date('Y-m-d');
+            $this->ctDiemModel->NguoiNhap = $_POST['NguoiNhap'] ?? 'System';
+
+            if ($this->ctDiemModel->update()) {
+                header("Location: index.php?url=ChiTietDiem/index");
+            } else {
+                echo "Lỗi cập nhật điểm.";
+            }
+        }
     }
 
-    // Tìm kiếm chi tiết điểm
-    public function searchChiTietDiem($criteria) {
-        return $this->chiTietDiemModel->search($criteria);
+    public function delete($id) {
+        $this->ctDiemModel->MaChiTiet = $id;
+        if ($this->ctDiemModel->delete()) {
+            header("Location: index.php?url=ChiTietDiem/index");
+        } else {
+            echo "Lỗi xóa điểm.";
+        }
     }
 }
-
 ?>

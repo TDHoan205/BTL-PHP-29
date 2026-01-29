@@ -1,53 +1,77 @@
 <?php
-
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/CauTrucDiem.php';
+require_once __DIR__ . '/../models/CauTrucDiemModel.php';
 
 class CauTrucDiemController {
-
     private $db;
-    private $cauTrucDiemModel;
+    private $ctdModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->cauTrucDiemModel = new CauTrucDiem($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->ctdModel = new CauTrucDiemModel($this->db);
     }
 
-    // Lấy danh sách tất cả các cấu trúc điểm
-    public function getAllCauTrucDiem() {
-        return $this->cauTrucDiemModel->readAll();
+    public function index() {
+        $cautrucs = $this->ctdModel->readAll();
+        $data = [
+            'cautrucs' => $cautrucs,
+            'pageTitle' => 'Cấu trúc điểm',
+            'breadcrumb' => 'Cấu trúc điểm'
+        ];
+        require_once "../app/views/cautrucdiem/index.php";
     }
 
-    // Lấy thông tin một cấu trúc điểm theo mã
-    public function getCauTrucDiemById($maCauTruc) {
-        return $this->cauTrucDiemModel->getById($maCauTruc);
+    public function create() {
+        require_once "../views/cautrucdiem/create.php";
     }
 
-    // Thêm một cấu trúc điểm mới
-    public function addCauTrucDiem($data) {
-        $this->cauTrucDiemModel->MaCauTruc = $data['MaCauTruc'];
-        $this->cauTrucDiemModel->TenCauTruc = $data['TenCauTruc'];
-        $this->cauTrucDiemModel->HeSo = $data['HeSo'];
-        return $this->cauTrucDiemModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->ctdModel->MaMonHoc = $_POST['MaMonHoc'] ?? null;
+            $this->ctdModel->MaLoaiDiem = $_POST['MaLoaiDiem'] ?? null;
+            $this->ctdModel->HeSo = $_POST['HeSo'] ?? null;
+            $this->ctdModel->MoTa = $_POST['MoTa'] ?? null;
+
+            if ($this->ctdModel->create()) {
+                header("Location: index.php?url=CauTrucDiem/index");
+            } else {
+                echo "Lỗi thêm cấu trúc điểm.";
+            }
+        }
     }
 
-    // Cập nhật thông tin cấu trúc điểm
-    public function updateCauTrucDiem($maCauTruc, $data) {
-        $this->cauTrucDiemModel->MaCauTruc = $maCauTruc;
-        $this->cauTrucDiemModel->TenCauTruc = $data['TenCauTruc'];
-        $this->cauTrucDiemModel->HeSo = $data['HeSo'];
-        return $this->cauTrucDiemModel->update();
+    public function edit($id) {
+        // Trong model bạn dùng getById theo MaCauTruc
+        $ctd = $this->ctdModel->getById($id);
+        require_once "../views/cautrucdiem/edit.php";
     }
 
-    // Xóa một cấu trúc điểm
-    public function deleteCauTrucDiem($maCauTruc) {
-        $this->cauTrucDiemModel->MaCauTruc = $maCauTruc;
-        return $this->cauTrucDiemModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Trong model bạn dùng ID để update, nên biến $id ở đây phải là ID (Primary Key)
+            $this->ctdModel->ID = $id;
+            $this->ctdModel->MaMonHoc = $_POST['MaMonHoc'] ?? null;
+            $this->ctdModel->MaLoaiDiem = $_POST['MaLoaiDiem'] ?? null;
+            $this->ctdModel->HeSo = $_POST['HeSo'] ?? null;
+            $this->ctdModel->MoTa = $_POST['MoTa'] ?? null;
+
+            if ($this->ctdModel->update()) {
+                header("Location: index.php?url=CauTrucDiem/index");
+            } else {
+                echo "Lỗi cập nhật cấu trúc điểm.";
+            }
+        }
     }
 
-    // Tìm kiếm cấu trúc điểm
-    public function searchCauTrucDiem($criteria) {
-        return $this->cauTrucDiemModel->search($criteria);
+    public function delete($id) {
+        // Trong model bạn dùng MaCauTruc để xóa
+        $this->ctdModel->MaCauTruc = $id;
+        if ($this->ctdModel->delete()) {
+            header("Location: index.php?url=CauTrucDiem/index");
+        } else {
+            echo "Lỗi xóa cấu trúc điểm.";
+        }
     }
 }
 ?>

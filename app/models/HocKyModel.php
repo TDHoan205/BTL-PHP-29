@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-class HocKy {
+class HocKyModel {
     private $conn;
     private $table_name = "HOC_KY";
 
@@ -113,5 +113,3 @@ class HocKy {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-
-?>

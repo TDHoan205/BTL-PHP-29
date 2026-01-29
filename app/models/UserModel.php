@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-class User {
+class UserModel {
     private $conn;
     private $table_name = "USER";
 
@@ -71,7 +71,7 @@ class User {
         return false;
     }
 
-    // Cập nhật thông tin người dùng
+    // Cập nhật người dùng
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET TenDangNhap=:TenDangNhap, MatKhau=:MatKhau, HoTen=:HoTen, Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, TrangThai=:TrangThai, NgayCapNhat=:NgayCapNhat WHERE MaUser=:MaUser";
         $stmt = $this->conn->prepare($query);
@@ -121,5 +121,3 @@ class User {
         return false;
     }
 }
-
-?>

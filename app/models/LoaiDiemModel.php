@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-class LoaiDiem {
+class LoaiDiemModel {
     private $conn;
     private $table_name = "LOAI_DIEM";
 
@@ -84,19 +84,4 @@ class LoaiDiem {
         }
         return false;
     }
-
-    // Tìm kiếm loại điểm theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLoaiDiem LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 }
-
-?>

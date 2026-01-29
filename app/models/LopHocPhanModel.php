@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-class LopHocPhan {
+class LopHocPhanModel {
     private $conn;
     private $table_name = "LOP_HOC_PHAN";
 
@@ -20,7 +20,7 @@ class LopHocPhan {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới lớp học phần
@@ -46,6 +46,15 @@ class LopHocPhan {
         return false;
     }
 
+    // Lấy thông tin một lớp học phần theo mã
+    public function getById($maLopHocPhan) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Cập nhật thông tin lớp học phần
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET MaMonHoc=:MaMonHoc, MaGiangVien=:MaGiangVien, TenLop=:TenLop WHERE MaLopHocPhan=:MaLopHocPhan";
@@ -69,35 +78,20 @@ class LopHocPhan {
         return false;
     }
 
-    // Lấy thông tin một lớp học phần theo mã lớp học phần
-    public function getById($maLopHocPhan) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Xóa một lớp học phần
+    // Xóa lớp học phần
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaLopHocPhan = :MaLopHocPhan";
         $stmt = $this->conn->prepare($query);
+
+        // sanitize
+        $this->MaLopHocPhan = htmlspecialchars(strip_tags($this->MaLopHocPhan));
+
+        // bind id
         $stmt->bindParam(":MaLopHocPhan", $this->MaLopHocPhan);
-        return $stmt->execute();
-    }
 
-    // Tìm kiếm lớp học phần theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLop LIKE :criteria OR MaMonHoc LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
 }
-
-?>

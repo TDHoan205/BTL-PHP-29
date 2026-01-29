@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-class LopHanhChinh {
+class LopHanhChinhModel {
     private $conn;
     private $table_name = "LOP_HANH_CHINH";
 
@@ -21,7 +21,7 @@ class LopHanhChinh {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới lớp hành chính
@@ -49,6 +49,15 @@ class LopHanhChinh {
         return false;
     }
 
+    // Lấy thông tin một lớp hành chính theo mã
+    public function getById($maLop) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLop = :MaLop";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaLop", $maLop);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Cập nhật thông tin lớp hành chính
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET TenLop=:TenLop, MaNganh=:MaNganh, KhoaHoc=:KhoaHoc, MaCoVan=:MaCoVan WHERE MaLop=:MaLop";
@@ -74,35 +83,20 @@ class LopHanhChinh {
         return false;
     }
 
-    // Lấy thông tin một lớp hành chính theo mã lớp
-    public function getById($maLop) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaLop = :MaLop";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaLop", $maLop);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Xóa một lớp hành chính
+    // Xóa lớp hành chính
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaLop = :MaLop";
         $stmt = $this->conn->prepare($query);
+
+        // sanitize
+        $this->MaLop = htmlspecialchars(strip_tags($this->MaLop));
+
+        // bind id
         $stmt->bindParam(":MaLop", $this->MaLop);
-        return $stmt->execute();
-    }
 
-    // Tìm kiếm lớp hành chính theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenLop LIKE :criteria OR MaNganh LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
 }
-
-?>

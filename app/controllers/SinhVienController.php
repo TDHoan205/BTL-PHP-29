@@ -1,57 +1,83 @@
 <?php
-
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/SinhVien.php';
+require_once __DIR__ . '/../models/SinhVienModel.php';
 
 class SinhVienController {
-
     private $db;
-    private $sinhVienModel;
+    private $svModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->sinhVienModel = new SinhVien($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+            $this->svModel = new SinhVienModel($this->db);
     }
 
-    // Lấy danh sách tất cả sinh viên
-    public function getAllSinhVien() {
-        return $this->sinhVienModel->readAll();
+    public function index() {
+        $sinhviens = $this->svModel->readAll();
+        $data = [
+            'sinhviens' => $sinhviens,
+            'pageTitle' => 'Quản lý Sinh viên',
+            'breadcrumb' => 'Sinh viên'
+        ];
+        require_once "../app/views/sinhvien/index.php";
     }
 
-    // Lấy thông tin một sinh viên theo mã sinh viên
-    public function getSinhVienById($maSinhVien) {
-        return $this->sinhVienModel->getById($maSinhVien);
+    public function create() {
+        require_once "../views/sinhvien/create.php";
     }
 
-    // Thêm một sinh viên mới
-    public function addSinhVien($data) {
-        $this->sinhVienModel->MaSinhVien = $data['MaSinhVien'];
-        $this->sinhVienModel->HoTen = $data['HoTen'];
-        $this->sinhVienModel->NgaySinh = $data['NgaySinh'];
-        $this->sinhVienModel->GioiTinh = $data['GioiTinh'];
-        $this->sinhVienModel->Email = $data['Email'];
-        $this->sinhVienModel->SoDienThoai = $data['SoDienThoai'];
-        $this->sinhVienModel->MaLop = $data['MaLop'];
-        return $this->sinhVienModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->svModel->MaSinhVien = $_POST['MaSinhVien'] ?? null;
+            $this->svModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->svModel->NgaySinh = $_POST['NgaySinh'] ?? null;
+            $this->svModel->GioiTinh = $_POST['GioiTinh'] ?? null;
+            $this->svModel->DiaChi = $_POST['DiaChi'] ?? null;
+            $this->svModel->Email = $_POST['Email'] ?? null;
+            $this->svModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->svModel->MaLop = $_POST['MaLop'] ?? null;
+            $this->svModel->TrangThaiHocTap = $_POST['TrangThaiHocTap'] ?? null;
+
+            if ($this->svModel->create()) {
+                header("Location: index.php?url=SinhVien/index");
+            } else {
+                echo "Lỗi thêm sinh viên.";
+            }
+        }
     }
 
-    // Cập nhật thông tin sinh viên
-    public function updateSinhVien($maSinhVien, $data) {
-        $this->sinhVienModel->MaSinhVien = $maSinhVien;
-        $this->sinhVienModel->HoTen = $data['HoTen'];
-        $this->sinhVienModel->NgaySinh = $data['NgaySinh'];
-        $this->sinhVienModel->GioiTinh = $data['GioiTinh'];
-        $this->sinhVienModel->Email = $data['Email'];
-        $this->sinhVienModel->SoDienThoai = $data['SoDienThoai'];
-        $this->sinhVienModel->MaLop = $data['MaLop'];
-        return $this->sinhVienModel->update();
+    public function edit($id) {
+        $sv = $this->svModel->getById($id);
+        require_once "../views/sinhvien/edit.php";
     }
 
-    // Xóa một sinh viên
-    public function deleteSinhVien($maSinhVien) {
-        $this->sinhVienModel->MaSinhVien = $maSinhVien;
-        return $this->sinhVienModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->svModel->MaSinhVien = $id;
+            $this->svModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->svModel->NgaySinh = $_POST['NgaySinh'] ?? null;
+            $this->svModel->GioiTinh = $_POST['GioiTinh'] ?? null;
+            $this->svModel->DiaChi = $_POST['DiaChi'] ?? null;
+            $this->svModel->Email = $_POST['Email'] ?? null;
+            $this->svModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->svModel->MaLop = $_POST['MaLop'] ?? null;
+            $this->svModel->TrangThaiHocTap = $_POST['TrangThaiHocTap'] ?? null;
+
+            if ($this->svModel->update()) {
+                header("Location: index.php?url=SinhVien/index");
+            } else {
+                echo "Lỗi cập nhật sinh viên.";
+            }
+        }
+    }
+
+    public function delete($id) {
+        $this->svModel->MaSinhVien = $id;
+        if ($this->svModel->delete()) {
+            header("Location: index.php?url=SinhVien/index");
+        } else {
+            echo "Lỗi xóa sinh viên.";
+        }
     }
 }
-
 ?>

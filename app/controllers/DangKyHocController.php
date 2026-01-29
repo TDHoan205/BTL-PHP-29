@@ -1,54 +1,72 @@
 <?php
-
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/DangKyHoc.php';
+require_once __DIR__ . '/../models/DangKyHocModel.php';
 
 class DangKyHocController {
-
     private $db;
-    private $dangKyHocModel;
+    private $dkhModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->dangKyHocModel = new DangKyHoc($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->dkhModel = new DangKyHocModel($this->db);
     }
 
-    // Lấy danh sách tất cả các đăng ký học
-    public function getAllDangKyHoc() {
-        return $this->dangKyHocModel->readAll();
+    public function index() {
+        $dangkyhocs = $this->dkhModel->readAll();
+        $data = [
+            'dangkyhocs' => $dangkyhocs,
+            'pageTitle' => 'Quản lý Đăng ký học',
+            'breadcrumb' => 'Đăng ký học'
+        ];
+        require_once "../app/views/dangkyhoc/index.php";
     }
 
-    // Lấy thông tin một đăng ký học theo mã
-    public function getDangKyHocById($maDangKy) {
-        return $this->dangKyHocModel->getById($maDangKy);
+    public function create() {
+        require_once "../views/dangkyhoc/create.php";
     }
 
-    // Thêm một đăng ký học mới
-    public function addDangKyHoc($data) {
-        $this->dangKyHocModel->MaDangKy = $data['MaDangKy'];
-        $this->dangKyHocModel->MaSinhVien = $data['MaSinhVien'];
-        $this->dangKyHocModel->MaLopHocPhan = $data['MaLopHocPhan'];
-        return $this->dangKyHocModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Model của bạn yêu cầu nhập MaDangKy thủ công
+            $this->dkhModel->MaDangKy = $_POST['MaDangKy'] ?? null;
+            $this->dkhModel->MaSinhVien = $_POST['MaSinhVien'] ?? null;
+            $this->dkhModel->MaLopHocPhan = $_POST['MaLopHocPhan'] ?? null;
+            
+            if ($this->dkhModel->create()) {
+                header("Location: index.php?url=DangKyHoc/index");
+            } else {
+                echo "Lỗi đăng ký học.";
+            }
+        }
     }
 
-    // Cập nhật thông tin đăng ký học
-    public function updateDangKyHoc($maDangKy, $data) {
-        $this->dangKyHocModel->MaDangKy = $maDangKy;
-        $this->dangKyHocModel->MaSinhVien = $data['MaSinhVien'];
-        $this->dangKyHocModel->MaLopHocPhan = $data['MaLopHocPhan'];
-        return $this->dangKyHocModel->update();
+    public function edit($id) {
+        $dkh = $this->dkhModel->getById($id);
+        require_once "../views/dangkyhoc/edit.php";
     }
 
-    // Xóa một đăng ký học
-    public function deleteDangKyHoc($maDangKy) {
-        $this->dangKyHocModel->MaDangKy = $maDangKy;
-        return $this->dangKyHocModel->delete();
+    public function update($id) {
+         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->dkhModel->MaDangKy = $id;
+            $this->dkhModel->MaSinhVien = $_POST['MaSinhVien'] ?? null;
+            $this->dkhModel->MaLopHocPhan = $_POST['MaLopHocPhan'] ?? null;
+
+            if ($this->dkhModel->update()) {
+                header("Location: index.php?url=DangKyHoc/index");
+            } else {
+                echo "Lỗi cập nhật đăng ký.";
+            }
+        }
     }
 
-    // Tìm kiếm đăng ký học
-    public function searchDangKyHoc($criteria) {
-        return $this->dangKyHocModel->search($criteria);
+    public function delete($id) {
+        $this->dkhModel->MaDangKy = $id;
+        if ($this->dkhModel->delete()) {
+            header("Location: index.php?url=DangKyHoc/index");
+        } else {
+            echo "Lỗi hủy đăng ký.";
+        }
     }
 }
-
 ?>
