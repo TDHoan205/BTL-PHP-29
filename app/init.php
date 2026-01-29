@@ -5,3 +5,7 @@ require_once 'core/Controller.php';
 
 // Load configuration
 require_once 'config/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}

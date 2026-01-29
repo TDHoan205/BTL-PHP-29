@@ -1,7 +1,7 @@
 <?php
 
-require_once '../config/Database.php';
-require_once '../models/MonHoc.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/MonHoc.php';
 
 class MonHocController {
 
@@ -28,6 +28,9 @@ class MonHocController {
         $this->monHocModel->MaMonHoc = $data['MaMonHoc'];
         $this->monHocModel->TenMonHoc = $data['TenMonHoc'];
         $this->monHocModel->SoTinChi = $data['SoTinChi'];
+        $this->monHocModel->SoTietLyThuyet = $data['SoTietLyThuyet'] ?? 0;
+        $this->monHocModel->SoTietThucHanh = $data['SoTietThucHanh'] ?? 0;
+        $this->monHocModel->MaNganh = $data['MaNganh'] ?? null;
         return $this->monHocModel->create();
     }
 
@@ -36,6 +39,9 @@ class MonHocController {
         $this->monHocModel->MaMonHoc = $maMonHoc;
         $this->monHocModel->TenMonHoc = $data['TenMonHoc'];
         $this->monHocModel->SoTinChi = $data['SoTinChi'];
+        $this->monHocModel->SoTietLyThuyet = $data['SoTietLyThuyet'] ?? 0;
+        $this->monHocModel->SoTietThucHanh = $data['SoTietThucHanh'] ?? 0;
+        $this->monHocModel->MaNganh = $data['MaNganh'] ?? null;
         return $this->monHocModel->update();
     }
 

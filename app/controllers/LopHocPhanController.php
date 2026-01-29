@@ -1,7 +1,7 @@
 <?php
 
-require_once '../config/Database.php';
-require_once '../models/LopHocPhan.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/LopHocPhan.php';
 
 class LopHocPhanController {
 
