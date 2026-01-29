@@ -1,7 +1,6 @@
 <?php
-// Initialize the application
-require_once 'core/App.php';
-require_once 'core/Controller.php';
-
-// Load configuration
-require_once 'config/config.php';
+require_once 'config/config.php';   // File chứa hằng số (DB_HOST...)
+require_once 'config/Database.php'; // File class Database
+require_once 'core/Controller.php'; // Class cha
+require_once 'core/App.php';        // Class xử lý Router
+?>

@@ -1,8 +1,8 @@
 <?php
 
-require_once "../config/Database.php";
+require_once __DIR__ . '/../config/Database.php';
 
-class Khoa {
+class KhoaModel {
     private $conn;
     private $table_name = "KHOA";
 
@@ -20,7 +20,7 @@ class Khoa {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới một khoa
@@ -46,6 +46,15 @@ class Khoa {
         return false;
     }
 
+    // Lấy thông tin một khoa theo mã
+    public function getById($maKhoa) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaKhoa = :MaKhoa";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaKhoa", $maKhoa);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Cập nhật thông tin khoa
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET TenKhoa=:TenKhoa, NgayThanhLap=:NgayThanhLap, TruongKhoa=:TruongKhoa WHERE MaKhoa=:MaKhoa";
@@ -69,35 +78,20 @@ class Khoa {
         return false;
     }
 
-    // Lấy thông tin một khoa theo mã khoa
-    public function getById($maKhoa) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaKhoa = :MaKhoa";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaKhoa", $maKhoa);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Xóa một khoa
+    // Xóa khoa
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaKhoa = :MaKhoa";
         $stmt = $this->conn->prepare($query);
+
+        // sanitize
+        $this->MaKhoa = htmlspecialchars(strip_tags($this->MaKhoa));
+
+        // bind id
         $stmt->bindParam(":MaKhoa", $this->MaKhoa);
-        return $stmt->execute();
-    }
 
-    // Tìm kiếm khoa theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenKhoa LIKE :criteria OR TruongKhoa LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
 }
-
-?>

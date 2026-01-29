@@ -1,1 +1,3 @@
-# BTL-PHP-29
+- đăng nhập Phân quyền vào admin hoặc teacher(role)
+- trong view tạo 2 folder: admin, teacher còn login chạy chung
+- fix lỗi CRUD trong code admin của từng đối tượng có trong dashboard

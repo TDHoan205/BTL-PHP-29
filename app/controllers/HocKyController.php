@@ -1,52 +1,75 @@
 <?php
-
-require_once '../config/Database.php';
-require_once '../models/HocKy.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/HocKyModel.php';
 
 class HocKyController {
-
     private $db;
-    private $hocKyModel;
+    private $hockyModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->hocKyModel = new HocKy($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->hockyModel = new HocKyModel($this->db);
     }
 
-    // Lấy danh sách tất cả các học kỳ
-    public function getAllHocKy() {
-        return $this->hocKyModel->readAll();
+    public function index() {
+        $hockys = $this->hockyModel->readAll();
+        $data = [
+            'hockys' => $hockys,
+            'pageTitle' => 'Quản lý Học kỳ',
+            'breadcrumb' => 'Học kỳ'
+        ];
+        require_once "../app/views/hocky/index.php";
     }
 
-    // Lấy thông tin một học kỳ theo mã
-    public function getHocKyById($maHocKy) {
-        return $this->hocKyModel->getById($maHocKy);
+    public function create() {
+        require_once "../views/hocky/create.php";
     }
 
-    // Thêm một học kỳ mới
-    public function addHocKy($data) {
-        $this->hocKyModel->MaHocKy = $data['MaHocKy'];
-        $this->hocKyModel->TenHocKy = $data['TenHocKy'];
-        return $this->hocKyModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->hockyModel->MaHocKy = $_POST['MaHocKy'] ?? null;
+            $this->hockyModel->TenHocKy = $_POST['TenHocKy'] ?? null;
+            $this->hockyModel->NamHoc = $_POST['NamHoc'] ?? null;
+            $this->hockyModel->NgayBatDau = $_POST['NgayBatDau'] ?? null;
+            $this->hockyModel->NgayKetThuc = $_POST['NgayKetThuc'] ?? null;
+
+            if ($this->hockyModel->create()) {
+                header("Location: index.php?url=HocKy/index");
+            } else {
+                echo "Lỗi thêm học kỳ.";
+            }
+        }
     }
 
-    // Cập nhật thông tin học kỳ
-    public function updateHocKy($maHocKy, $data) {
-        $this->hocKyModel->MaHocKy = $maHocKy;
-        $this->hocKyModel->TenHocKy = $data['TenHocKy'];
-        return $this->hocKyModel->update();
+    public function edit($id) {
+        $hocky = $this->hockyModel->getById($id);
+        require_once "../views/hocky/edit.php";
     }
 
-    // Xóa một học kỳ
-    public function deleteHocKy($maHocKy) {
-        $this->hocKyModel->MaHocKy = $maHocKy;
-        return $this->hocKyModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->hockyModel->MaHocKy = $id;
+            $this->hockyModel->TenHocKy = $_POST['TenHocKy'] ?? null;
+            $this->hockyModel->NamHoc = $_POST['NamHoc'] ?? null;
+            $this->hockyModel->NgayBatDau = $_POST['NgayBatDau'] ?? null;
+            $this->hockyModel->NgayKetThuc = $_POST['NgayKetThuc'] ?? null;
+
+            if ($this->hockyModel->update()) {
+                header("Location: index.php?url=HocKy/index");
+            } else {
+                echo "Lỗi cập nhật học kỳ.";
+            }
+        }
     }
 
-    // Tìm kiếm học kỳ
-    public function searchHocKy($criteria) {
-        return $this->hocKyModel->search($criteria);
+    public function delete($id) {
+        $this->hockyModel->MaHocKy = $id;
+        if ($this->hockyModel->delete()) {
+            header("Location: index.php?url=HocKy/index");
+        } else {
+            echo "Lỗi xóa học kỳ.";
+        }
     }
 }
-
 ?>

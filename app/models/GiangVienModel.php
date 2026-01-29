@@ -1,8 +1,8 @@
 <?php
 
-require_once "../config/Database.php";
+require_once __DIR__ . '/../config/Database.php';
 
-class GiangVien {
+class GiangVienModel {
     private $conn;
     private $table_name = "GIANG_VIEN";
 
@@ -25,7 +25,7 @@ class GiangVien {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới giảng viên

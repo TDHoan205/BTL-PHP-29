@@ -1,52 +1,69 @@
 <?php
-
-require_once '../config/Database.php';
-require_once '../models/LoaiDiem.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/LoaiDiemModel.php';
 
 class LoaiDiemController {
-
     private $db;
     private $loaiDiemModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->loaiDiemModel = new LoaiDiem($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->loaiDiemModel = new LoaiDiemModel($this->db);
     }
 
-    // Lấy danh sách tất cả các loại điểm
-    public function getAllLoaiDiem() {
-        return $this->loaiDiemModel->readAll();
+    public function index() {
+        $loaidiems = $this->loaiDiemModel->readAll();
+        $data = [
+            'loaidiems' => $loaidiems,
+            'pageTitle' => 'Quản lý Loại điểm',
+            'breadcrumb' => 'Loại điểm'
+        ];
+        require_once "../app/views/loaidiem/index.php";
     }
 
-    // Lấy thông tin một loại điểm theo mã
-    public function getLoaiDiemById($maLoaiDiem) {
-        return $this->loaiDiemModel->getById($maLoaiDiem);
+    public function create() {
+        require_once "../views/loaidiem/create.php";
     }
 
-    // Thêm một loại điểm mới
-    public function addLoaiDiem($data) {
-        $this->loaiDiemModel->MaLoaiDiem = $data['MaLoaiDiem'];
-        $this->loaiDiemModel->TenLoaiDiem = $data['TenLoaiDiem'];
-        return $this->loaiDiemModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->loaiDiemModel->MaLoaiDiem = $_POST['MaLoaiDiem'] ?? null;
+            $this->loaiDiemModel->TenLoaiDiem = $_POST['TenLoaiDiem'] ?? null;
+
+            if ($this->loaiDiemModel->create()) {
+                header("Location: index.php?url=LoaiDiem/index");
+            } else {
+                echo "Lỗi thêm loại điểm.";
+            }
+        }
     }
 
-    // Cập nhật thông tin loại điểm
-    public function updateLoaiDiem($maLoaiDiem, $data) {
-        $this->loaiDiemModel->MaLoaiDiem = $maLoaiDiem;
-        $this->loaiDiemModel->TenLoaiDiem = $data['TenLoaiDiem'];
-        return $this->loaiDiemModel->update();
+    public function edit($id) {
+        $loaiDiem = $this->loaiDiemModel->getById($id);
+        require_once "../views/loaidiem/edit.php";
     }
 
-    // Xóa một loại điểm
-    public function deleteLoaiDiem($maLoaiDiem) {
-        $this->loaiDiemModel->MaLoaiDiem = $maLoaiDiem;
-        return $this->loaiDiemModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->loaiDiemModel->MaLoaiDiem = $id;
+            $this->loaiDiemModel->TenLoaiDiem = $_POST['TenLoaiDiem'] ?? null;
+
+            if ($this->loaiDiemModel->update()) {
+                header("Location: index.php?url=LoaiDiem/index");
+            } else {
+                echo "Lỗi cập nhật loại điểm.";
+            }
+        }
     }
 
-    // Tìm kiếm loại điểm
-    public function searchLoaiDiem($criteria) {
-        return $this->loaiDiemModel->search($criteria);
+    public function delete($id) {
+        $this->loaiDiemModel->MaLoaiDiem = $id;
+        if ($this->loaiDiemModel->delete()) {
+            header("Location: index.php?url=LoaiDiem/index");
+        } else {
+            echo "Lỗi xóa loại điểm.";
+        }
     }
 }
-
 ?>

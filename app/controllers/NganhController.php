@@ -1,54 +1,71 @@
 <?php
-
-require_once '../config/Database.php';
-require_once '../models/Nganh.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/NganhModel.php';
 
 class NganhController {
-
     private $db;
     private $nganhModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->nganhModel = new Nganh($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+            $this->nganhModel = new NganhModel($this->db);
     }
 
-    // Lấy danh sách tất cả các ngành
-    public function getAllNganh() {
-        return $this->nganhModel->readAll();
+    public function index() {
+        $nganhs = $this->nganhModel->readAll();
+        $data = [
+            'nganhs' => $nganhs,
+            'pageTitle' => 'Quản lý Ngành',
+            'breadcrumb' => 'Ngành'
+        ];
+        require_once "../app/views/nganh/index.php";
     }
 
-    // Lấy thông tin một ngành theo mã ngành
-    public function getNganhById($maNganh) {
-        return $this->nganhModel->getById($maNganh);
+    public function create() {
+        require_once "../views/nganh/create.php";
     }
 
-    // Thêm một ngành mới
-    public function addNganh($data) {
-        $this->nganhModel->MaNganh = $data['MaNganh'];
-        $this->nganhModel->TenNganh = $data['TenNganh'];
-        $this->nganhModel->MaKhoa = $data['MaKhoa'];
-        return $this->nganhModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->nganhModel->MaNganh = $_POST['MaNganh'] ?? null;
+            $this->nganhModel->TenNganh = $_POST['TenNganh'] ?? null;
+            $this->nganhModel->MaKhoa = $_POST['MaKhoa'] ?? null;
+
+            if ($this->nganhModel->create()) {
+                header("Location: index.php?url=Nganh/index");
+            } else {
+                echo "Lỗi thêm ngành.";
+            }
+        }
     }
 
-    // Cập nhật thông tin ngành
-    public function updateNganh($maNganh, $data) {
-        $this->nganhModel->MaNganh = $maNganh;
-        $this->nganhModel->TenNganh = $data['TenNganh'];
-        $this->nganhModel->MaKhoa = $data['MaKhoa'];
-        return $this->nganhModel->update();
+    public function edit($id) {
+        $nganh = $this->nganhModel->getById($id);
+        require_once "../views/nganh/edit.php";
     }
 
-    // Xóa một ngành
-    public function deleteNganh($maNganh) {
-        $this->nganhModel->MaNganh = $maNganh;
-        return $this->nganhModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->nganhModel->MaNganh = $id;
+            $this->nganhModel->TenNganh = $_POST['TenNganh'] ?? null;
+            $this->nganhModel->MaKhoa = $_POST['MaKhoa'] ?? null;
+
+            if ($this->nganhModel->update()) {
+                header("Location: index.php?url=Nganh/index");
+            } else {
+                echo "Lỗi cập nhật ngành.";
+            }
+        }
     }
 
-    // Tìm kiếm ngành
-    public function searchNganh($criteria) {
-        return $this->nganhModel->search($criteria);
+    public function delete($id) {
+        $this->nganhModel->MaNganh = $id;
+        if ($this->nganhModel->delete()) {
+            header("Location: index.php?url=Nganh/index");
+        } else {
+            echo "Lỗi xóa ngành.";
+        }
     }
 }
-
 ?>

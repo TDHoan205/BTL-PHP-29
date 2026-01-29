@@ -1,66 +1,84 @@
 <?php
-
-require_once '../config/Database.php';
-require_once '../models/GiangVien.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/GiangVienModel.php';
 
 class GiangVienController {
-
     private $db;
-    private $giangVienModel;
+    private $gvModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->giangVienModel = new GiangVien($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->gvModel = new GiangVienModel($this->db);
     }
 
-    // Lấy danh sách tất cả giảng viên
-    public function getAllGiangVien() {
-        return $this->giangVienModel->readAll();
+    public function index() {
+        $giangviens = $this->gvModel->readAll();
+        $data = [
+            'giangviens' => $giangviens,
+            'pageTitle' => 'Quản lý Giảng viên',
+            'breadcrumb' => 'Giảng viên'
+        ];
+        require_once "../app/views/giangvien/index.php";
     }
 
-    // Lấy thông tin một giảng viên theo mã giảng viên
-    public function getGiangVienById($maGiangVien) {
-        return $this->giangVienModel->getById($maGiangVien);
+    public function create() {
+        require_once "../app/views/giangvien/create.php";
     }
 
-    // Thêm một giảng viên mới
-    public function addGiangVien($data) {
-        $this->giangVienModel->MaGiangVien = $data['MaGiangVien'];
-        $this->giangVienModel->HoTen = $data['HoTen'];
-        $this->giangVienModel->NgaySinh = $data['NgaySinh'];
-        $this->giangVienModel->GioiTinh = $data['GioiTinh'];
-        $this->giangVienModel->Email = $data['Email'];
-        $this->giangVienModel->SoDienThoai = $data['SoDienThoai'];
-        $this->giangVienModel->HocVi = $data['HocVi'];
-        $this->giangVienModel->MaKhoa = $data['MaKhoa'];
-        $this->giangVienModel->TrangThai = $data['TrangThai'];
-        return $this->giangVienModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->gvModel->MaGiangVien = $_POST['MaGiangVien'] ?? null;
+            $this->gvModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->gvModel->NgaySinh = $_POST['NgaySinh'] ?? null;
+            $this->gvModel->GioiTinh = $_POST['GioiTinh'] ?? null;
+            $this->gvModel->Email = $_POST['Email'] ?? null;
+            $this->gvModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->gvModel->HocVi = $_POST['HocVi'] ?? null;
+            $this->gvModel->MaKhoa = $_POST['MaKhoa'] ?? null;
+            $this->gvModel->TrangThai = $_POST['TrangThai'] ?? null;
+
+            if ($this->gvModel->create()) {
+                header("Location: index.php?url=GiangVien/index");
+            } else {
+                echo "Lỗi thêm giảng viên.";
+            }
+        }
     }
 
-    // Cập nhật thông tin giảng viên
-    public function updateGiangVien($maGiangVien, $data) {
-        $this->giangVienModel->MaGiangVien = $maGiangVien;
-        $this->giangVienModel->HoTen = $data['HoTen'];
-        $this->giangVienModel->NgaySinh = $data['NgaySinh'];
-        $this->giangVienModel->GioiTinh = $data['GioiTinh'];
-        $this->giangVienModel->Email = $data['Email'];
-        $this->giangVienModel->SoDienThoai = $data['SoDienThoai'];
-        $this->giangVienModel->HocVi = $data['HocVi'];
-        $this->giangVienModel->MaKhoa = $data['MaKhoa'];
-        $this->giangVienModel->TrangThai = $data['TrangThai'];
-        return $this->giangVienModel->update();
+    public function edit($id) {
+        $gv = $this->gvModel->getById($id);
+        $data = ['giangvien' => $gv];
+        require_once "../app/views/giangvien/edit.php";
     }
 
-    // Xóa một giảng viên
-    public function deleteGiangVien($maGiangVien) {
-        $this->giangVienModel->MaGiangVien = $maGiangVien;
-        return $this->giangVienModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->gvModel->MaGiangVien = $id;
+            $this->gvModel->HoTen = $_POST['HoTen'] ?? null;
+            $this->gvModel->NgaySinh = $_POST['NgaySinh'] ?? null;
+            $this->gvModel->GioiTinh = $_POST['GioiTinh'] ?? null;
+            $this->gvModel->Email = $_POST['Email'] ?? null;
+            $this->gvModel->SoDienThoai = $_POST['SoDienThoai'] ?? null;
+            $this->gvModel->HocVi = $_POST['HocVi'] ?? null;
+            $this->gvModel->MaKhoa = $_POST['MaKhoa'] ?? null;
+            $this->gvModel->TrangThai = $_POST['TrangThai'] ?? null;
+
+            if ($this->gvModel->update()) {
+                header("Location: index.php?url=GiangVien/index");
+            } else {
+                echo "Lỗi cập nhật giảng viên.";
+            }
+        }
     }
 
-    // Tìm kiếm giảng viên
-    public function searchGiangVien($criteria) {
-        return $this->giangVienModel->search($criteria);
+    public function delete($id) {
+        $this->gvModel->MaGiangVien = $id;
+        if ($this->gvModel->delete()) {
+            header("Location: index.php?url=GiangVien/index");
+        } else {
+            echo "Lỗi xóa giảng viên.";
+        }
     }
 }
-
 ?>

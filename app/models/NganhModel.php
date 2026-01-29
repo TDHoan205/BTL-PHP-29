@@ -1,8 +1,8 @@
 <?php
 
-require_once "../config/Database.php";
+require_once __DIR__ . '/../config/Database.php';
 
-class Nganh {
+class NganhModel {
     private $conn;
     private $table_name = "NGANH";
 
@@ -19,7 +19,7 @@ class Nganh {
         $query = "SELECT * FROM " . $this->table_name;
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Tạo mới một ngành
@@ -43,6 +43,15 @@ class Nganh {
         return false;
     }
 
+    // Lấy thông tin một ngành theo mã
+    public function getById($maNganh) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaNganh", $maNganh);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Cập nhật thông tin ngành
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET TenNganh=:TenNganh, MaKhoa=:MaKhoa WHERE MaNganh=:MaNganh";
@@ -64,35 +73,20 @@ class Nganh {
         return false;
     }
 
-    // Lấy thông tin một ngành theo mã ngành
-    public function getById($maNganh) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaNganh", $maNganh);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Xóa một ngành
+    // Xóa ngành
     public function delete() {
         $query = "DELETE FROM " . $this->table_name . " WHERE MaNganh = :MaNganh";
         $stmt = $this->conn->prepare($query);
+
+        // sanitize
+        $this->MaNganh = htmlspecialchars(strip_tags($this->MaNganh));
+
+        // bind id
         $stmt->bindParam(":MaNganh", $this->MaNganh);
-        return $stmt->execute();
-    }
 
-    // Tìm kiếm ngành theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenNganh LIKE :criteria OR MaKhoa LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
 }
-
-?>

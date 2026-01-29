@@ -1,54 +1,77 @@
 <?php
-
-require_once '../config/Database.php';
-require_once '../models/MonHoc.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/MonHocModel.php';
 
 class MonHocController {
-
     private $db;
     private $monHocModel;
 
     public function __construct() {
-        $this->db = new Database();
-        $this->monHocModel = new MonHoc($this->db->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->monHocModel = new MonHocModel($this->db);
     }
 
-    // Lấy danh sách tất cả các môn học
-    public function getAllMonHoc() {
-        return $this->monHocModel->readAll();
+    public function index() {
+        $monhocs = $this->monHocModel->readAll();
+        $data = [
+            'monhocs' => $monhocs,
+            'pageTitle' => 'Quản lý Môn học',
+            'breadcrumb' => 'Môn học'
+        ];
+        require_once "../app/views/monhoc/index.php";
     }
 
-    // Lấy thông tin một môn học theo mã môn học
-    public function getMonHocById($maMonHoc) {
-        return $this->monHocModel->getById($maMonHoc);
+    public function create() {
+        require_once "../views/monhoc/create.php";
     }
 
-    // Thêm một môn học mới
-    public function addMonHoc($data) {
-        $this->monHocModel->MaMonHoc = $data['MaMonHoc'];
-        $this->monHocModel->TenMonHoc = $data['TenMonHoc'];
-        $this->monHocModel->SoTinChi = $data['SoTinChi'];
-        return $this->monHocModel->create();
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->monHocModel->MaMonHoc = $_POST['MaMonHoc'] ?? null;
+            $this->monHocModel->TenMonHoc = $_POST['TenMonHoc'] ?? null;
+            $this->monHocModel->SoTinChi = $_POST['SoTinChi'] ?? 0;
+            $this->monHocModel->SoTietLyThuyet = $_POST['SoTietLyThuyet'] ?? 0;
+            $this->monHocModel->SoTietThucHanh = $_POST['SoTietThucHanh'] ?? 0;
+            $this->monHocModel->MaNganh = $_POST['MaNganh'] ?? null;
+
+            if ($this->monHocModel->create()) {
+                header("Location: index.php?url=MonHoc/index");
+            } else {
+                echo "Lỗi thêm môn học.";
+            }
+        }
     }
 
-    // Cập nhật thông tin môn học
-    public function updateMonHoc($maMonHoc, $data) {
-        $this->monHocModel->MaMonHoc = $maMonHoc;
-        $this->monHocModel->TenMonHoc = $data['TenMonHoc'];
-        $this->monHocModel->SoTinChi = $data['SoTinChi'];
-        return $this->monHocModel->update();
+    public function edit($id) {
+        $monHoc = $this->monHocModel->getById($id);
+        require_once "../views/monhoc/edit.php";
     }
 
-    // Xóa một môn học
-    public function deleteMonHoc($maMonHoc) {
-        $this->monHocModel->MaMonHoc = $maMonHoc;
-        return $this->monHocModel->delete();
+    public function update($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $this->monHocModel->MaMonHoc = $id;
+            $this->monHocModel->TenMonHoc = $_POST['TenMonHoc'] ?? null;
+            $this->monHocModel->SoTinChi = $_POST['SoTinChi'] ?? 0;
+            $this->monHocModel->SoTietLyThuyet = $_POST['SoTietLyThuyet'] ?? 0;
+            $this->monHocModel->SoTietThucHanh = $_POST['SoTietThucHanh'] ?? 0;
+            $this->monHocModel->MaNganh = $_POST['MaNganh'] ?? null;
+
+            if ($this->monHocModel->update()) {
+                header("Location: index.php?url=MonHoc/index");
+            } else {
+                echo "Lỗi cập nhật môn học.";
+            }
+        }
     }
 
-    // Tìm kiếm môn học
-    public function searchMonHoc($criteria) {
-        return $this->monHocModel->search($criteria);
+    public function delete($id) {
+        $this->monHocModel->MaMonHoc = $id;
+        if ($this->monHocModel->delete()) {
+            header("Location: index.php?url=MonHoc/index");
+        } else {
+            echo "Lỗi xóa môn học.";
+        }
     }
 }
-
 ?>

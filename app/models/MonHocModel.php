@@ -1,8 +1,8 @@
 <?php
 
-require_once "../config/Database.php";
+require_once __DIR__ . '/../config/Database.php';
 
-class MonHoc {
+class MonHocModel {
     private $conn;
     private $table_name = "MON_HOC";
 
@@ -61,7 +61,7 @@ class MonHoc {
         return false;
     }
 
-    // Cập nhật thông tin môn học
+    // Cập nhật môn học
     public function update() {
         $query = "UPDATE " . $this->table_name . " SET TenMonHoc=:TenMonHoc, SoTinChi=:SoTinChi, SoTietLyThuyet=:SoTietLyThuyet, SoTietThucHanh=:SoTietThucHanh, MaNganh=:MaNganh WHERE MaMonHoc=:MaMonHoc";
         $stmt = $this->conn->prepare($query);
@@ -104,19 +104,4 @@ class MonHoc {
         }
         return false;
     }
-
-    // Tìm kiếm môn học theo tiêu chí
-    public function search($criteria) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE TenMonHoc LIKE :criteria OR MaNganh LIKE :criteria";
-        $stmt = $this->conn->prepare($query);
-
-        // sanitize input
-        $criteria = "%" . htmlspecialchars(strip_tags($criteria)) . "%";
-        $stmt->bindParam(":criteria", $criteria);
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 }
-
-?>
