@@ -1,0 +1,162 @@
+<?php
+/**
+ * LopHocPhanModel - Quản lý dữ liệu Lớp học phần
+ */
+require_once __DIR__ . '/../core/Model.php';
+
+class LopHocPhanModel extends Model {
+    protected $table_name = "LOP_HOC_PHAN";
+    protected $primaryKey = "MaLopHocPhan";
+
+    public $MaLopHocPhan;
+    public $MaMonHoc;
+    public $MaHocKy;
+    public $MaGiangVien;
+    public $PhongHoc;
+    public $SoLuongToiDa;
+    public $TrangThai;
+
+    /**
+     * Lấy tất cả lớp học phần kèm thông tin chi tiết
+     */
+    public function readAllWithDetails() {
+        try {
+            $query = "SELECT lhp.*, mh.TenMonHoc, gv.HoTen as TenGV, hk.TenHocKy,
+                      (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSo
+                      FROM {$this->table_name} lhp
+                      LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                      LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
+                      LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                      ORDER BY lhp.MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in readAllWithDetails: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Lấy danh sách lớp học phần do một giảng viên phụ trách (có thông tin chi tiết)
+     */
+    public function getByMaGiangVien($maGiangVien) {
+        if (empty($maGiangVien)) {
+            return [];
+        }
+        try {
+            $query = "SELECT DISTINCT lhp.MaLopHocPhan, lhp.MaMonHoc, lhp.MaHocKy, lhp.MaGiangVien, 
+                      lhp.PhongHoc, lhp.SoLuongToiDa, lhp.TrangThai,
+                      mh.TenMonHoc, mh.SoTinChi, gv.HoTen as TenGV, hk.TenHocKy, hk.NamHoc,
+                      (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSo,
+                      (SELECT GROUP_CONCAT(CONCAT('T', tkb.Thu, ' Tiết ', tkb.TietBatDau, '-', tkb.TietKetThuc) SEPARATOR ', ')
+                       FROM THOI_KHOA_BIEU tkb WHERE tkb.MaLopHocPhan = lhp.MaLopHocPhan) as TietHoc,
+                      (SELECT CONCAT('Thứ ', tkb.Thu) FROM THOI_KHOA_BIEU tkb WHERE tkb.MaLopHocPhan = lhp.MaLopHocPhan ORDER BY tkb.Thu, tkb.TietBatDau LIMIT 1) as Thu
+                      FROM {$this->table_name} lhp
+                      LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                      LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
+                      LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                      WHERE lhp.MaGiangVien = :MaGiangVien
+                      ORDER BY lhp.MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaGiangVien", $maGiangVien);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getByMaGiangVien: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Lấy thông tin một lớp học phần theo mã (kèm thông tin môn học)
+     */
+    public function getById($maLopHocPhan) {
+        try {
+            $query = "SELECT lhp.*, mh.TenMonHoc, mh.SoTinChi 
+                      FROM {$this->table_name} lhp
+                      LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                      WHERE lhp.MaLopHocPhan = :MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getById: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Tạo mới lớp học phần
+     */
+    public function create() {
+        try {
+            $query = "INSERT INTO {$this->table_name} 
+                      SET MaLopHocPhan=:MaLopHocPhan, MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, 
+                          MaGiangVien=:MaGiangVien, PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc) ?: null);
+            $stmt->bindValue(":MaHocKy", $this->sanitize($this->MaHocKy) ?: null);
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien) ?: null);
+            $stmt->bindValue(":PhongHoc", $this->sanitize($this->PhongHoc) ?: null);
+            $stmt->bindValue(":SoLuongToiDa", (int)($this->SoLuongToiDa ?: 60));
+            $stmt->bindValue(":TrangThai", (int)($this->TrangThai ?? 1));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể thêm lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::create');
+        }
+    }
+
+    /**
+     * Cập nhật lớp học phần
+     */
+    public function update() {
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, MaGiangVien=:MaGiangVien, 
+                          PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai 
+                      WHERE MaLopHocPhan=:MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
+            $stmt->bindValue(":MaMonHoc", $this->sanitize($this->MaMonHoc) ?: null);
+            $stmt->bindValue(":MaHocKy", $this->sanitize($this->MaHocKy) ?: null);
+            $stmt->bindValue(":MaGiangVien", $this->sanitize($this->MaGiangVien) ?: null);
+            $stmt->bindValue(":PhongHoc", $this->sanitize($this->PhongHoc) ?: null);
+            $stmt->bindValue(":SoLuongToiDa", (int)($this->SoLuongToiDa ?: 60));
+            $stmt->bindValue(":TrangThai", (int)($this->TrangThai ?? 1));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::update');
+        }
+    }
+
+    /**
+     * Xóa lớp học phần
+     */
+    public function delete() {
+        try {
+            $query = "DELETE FROM {$this->table_name} WHERE MaLopHocPhan = :MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaLopHocPhan", $this->sanitize($this->MaLopHocPhan));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể xóa lớp học phần. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'LopHocPhanModel::delete');
+        }
+    }
+}
