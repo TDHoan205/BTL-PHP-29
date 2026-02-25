@@ -1,0 +1,31 @@
+# Thông tin cấu hình nhạy cảm - KHÔNG ĐƯỢC PUSH LÊN GIT
+app/config/email.php
+
+# IDE và editor
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Dependencies (nếu có)
+vendor/
+node_modules/
+
+# Cache
+*.cache
+cache/
+
+# Upload files (tùy chọn)
+# public/uploads/
+
+# Environment files
+.env
+.env.local
+.env.*.local
