@@ -138,4 +138,33 @@ class MonHocModel extends Model {
             return $this->handlePdoException($e, 'MonHocModel::delete');
         }
     }
+
+    /**
+     * Tạo mã môn học tiếp theo tự động
+     * Format: MH001, MH002, ...
+     */
+    public function generateNextId($prefix = 'MH') {
+        try {
+            $query = "SELECT MaMonHoc FROM {$this->table_name} 
+                      WHERE MaMonHoc LIKE :prefix 
+                      ORDER BY MaMonHoc DESC LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':prefix', $prefix . '%');
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                $currentId = $result['MaMonHoc'];
+                $number = intval(preg_replace('/[^0-9]/', '', $currentId));
+                $nextNumber = $number + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            
+            return $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } catch (PDOException $e) {
+            error_log("Error in generateNextId: " . $e->getMessage());
+            return $prefix . '001';
+        }
+    }
 }

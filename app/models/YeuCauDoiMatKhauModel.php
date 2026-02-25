@@ -1,6 +1,7 @@
 <?php
 /**
  * YeuCauDoiMatKhauModel - Quản lý yêu cầu quên mật khẩu
+ * Quy trình: Người dùng gửi yêu cầu → Admin duyệt → Gửi email mật khẩu mới
  */
 require_once __DIR__ . '/../core/Model.php';
 
@@ -9,28 +10,44 @@ class YeuCauDoiMatKhauModel extends Model {
     protected $primaryKey = "ID";
 
     public $ID;
+    public $MaUser;
     public $TenDangNhap;
-    public $MaNguoiDung;
+    public $Email;
+    public $HoTen;
     public $VaiTro;
+    public $LyDo;
     public $NgayYeuCau;
     public $TrangThai;
-    public $MatKhauMoi;
     public $NguoiXuLy;
     public $NgayXuLy;
-    public $GhiChu;
+    public $GhiChuAdmin;
 
     /**
      * Tạo yêu cầu đổi mật khẩu mới
+     * @param array|null $data Dữ liệu yêu cầu (nếu không truyền sẽ sử dụng thuộc tính của model)
      */
-    public function create() {
+    public function create($data = null) {
         try {
+            // Nếu có tham số truyền vào, gán vào thuộc tính
+            if ($data !== null && is_array($data)) {
+                $this->MaUser = $data['MaUser'] ?? $this->MaUser;
+                $this->TenDangNhap = $data['TenDangNhap'] ?? $this->TenDangNhap;
+                $this->Email = $data['Email'] ?? $this->Email;
+                $this->HoTen = $data['HoTen'] ?? $this->HoTen;
+                $this->VaiTro = $data['VaiTro'] ?? $this->VaiTro;
+                $this->LyDo = $data['LyDo'] ?? $this->LyDo;
+            }
+            
             $query = "INSERT INTO {$this->table_name} 
-                      (TenDangNhap, MaNguoiDung, VaiTro, TrangThai)
-                      VALUES (:TenDangNhap, :MaNguoiDung, :VaiTro, 'ChoXuLy')";
+                      (MaUser, TenDangNhap, Email, HoTen, VaiTro, LyDo, TrangThai)
+                      VALUES (:MaUser, :TenDangNhap, :Email, :HoTen, :VaiTro, :LyDo, 'ChoXuLy')";
             $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':MaUser', (int)$this->MaUser);
             $stmt->bindValue(':TenDangNhap', $this->sanitize($this->TenDangNhap));
-            $stmt->bindValue(':MaNguoiDung', $this->sanitize($this->MaNguoiDung));
+            $stmt->bindValue(':Email', $this->sanitize($this->Email));
+            $stmt->bindValue(':HoTen', $this->sanitize($this->HoTen));
             $stmt->bindValue(':VaiTro', $this->sanitize($this->VaiTro));
+            $stmt->bindValue(':LyDo', $this->sanitize($this->LyDo) ?: null);
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log("YeuCauDoiMatKhauModel::create: " . $e->getMessage());
@@ -43,9 +60,11 @@ class YeuCauDoiMatKhauModel extends Model {
      */
     public function getChoXuLy() {
         try {
-            $query = "SELECT * FROM {$this->table_name} 
-                      WHERE TrangThai = 'ChoXuLy' 
-                      ORDER BY NgayYeuCau DESC";
+            $query = "SELECT y.*, u.Avatar 
+                      FROM {$this->table_name} y
+                      LEFT JOIN USER u ON y.MaUser = u.MaUser
+                      WHERE y.TrangThai = 'ChoXuLy' 
+                      ORDER BY y.NgayYeuCau DESC";
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,8 +79,11 @@ class YeuCauDoiMatKhauModel extends Model {
      */
     public function readAll() {
         try {
-            $query = "SELECT * FROM {$this->table_name} 
-                      ORDER BY NgayYeuCau DESC";
+            $query = "SELECT y.*, u.Avatar, admin.HoTen as TenNguoiXuLy
+                      FROM {$this->table_name} y
+                      LEFT JOIN USER u ON y.MaUser = u.MaUser
+                      LEFT JOIN USER admin ON y.NguoiXuLy = admin.MaUser
+                      ORDER BY y.NgayYeuCau DESC";
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -76,7 +98,10 @@ class YeuCauDoiMatKhauModel extends Model {
      */
     public function getById($id) {
         try {
-            $query = "SELECT * FROM {$this->table_name} WHERE ID = :ID";
+            $query = "SELECT y.*, u.Avatar
+                      FROM {$this->table_name} y
+                      LEFT JOIN USER u ON y.MaUser = u.MaUser
+                      WHERE y.ID = :ID";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':ID', $id);
             $stmt->execute();
@@ -90,18 +115,16 @@ class YeuCauDoiMatKhauModel extends Model {
     /**
      * Kiểm tra yêu cầu đã tồn tại chưa (đang chờ xử lý)
      */
-    public function hasRequestPending($tenDangNhap, $maNguoiDung) {
+    public function hasRequestPending($maUser) {
         try {
             $query = "SELECT COUNT(*) as count FROM {$this->table_name} 
-                      WHERE TenDangNhap = :TenDangNhap 
-                      AND MaNguoiDung = :MaNguoiDung 
+                      WHERE MaUser = :MaUser 
                       AND TrangThai = 'ChoXuLy'";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindValue(':TenDangNhap', $tenDangNhap);
-            $stmt->bindValue(':MaNguoiDung', $maNguoiDung);
+            $stmt->bindValue(':MaUser', (int)$maUser);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return ($result['count'] ?? 0) > 0;
+            return $result['count'] > 0;
         } catch (PDOException $e) {
             error_log("YeuCauDoiMatKhauModel::hasRequestPending: " . $e->getMessage());
             return false;
@@ -109,23 +132,86 @@ class YeuCauDoiMatKhauModel extends Model {
     }
 
     /**
-     * Xác nhận yêu cầu (duyệt hoặc từ chối)
+     * Duyệt yêu cầu
      */
-    public function updateStatus($id, $trangThai, $nguoiXuLy, $matKhauMoi = null, $ghiChu = null) {
+    public function approve($id, $nguoiXuLy, $ghiChu = null) {
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET TrangThai = 'DaDuyet', 
+                          NguoiXuLy = :NguoiXuLy, 
+                          NgayXuLy = NOW(),
+                          GhiChuAdmin = :GhiChuAdmin
+                      WHERE ID = :ID";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':ID', (int)$id);
+            $stmt->bindValue(':NguoiXuLy', (int)$nguoiXuLy);
+            $stmt->bindValue(':GhiChuAdmin', $this->sanitize($ghiChu));
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("YeuCauDoiMatKhauModel::approve: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Từ chối yêu cầu
+     */
+    public function reject($id, $nguoiXuLy, $ghiChu = null) {
+        try {
+            $query = "UPDATE {$this->table_name} 
+                      SET TrangThai = 'TuChoi', 
+                          NguoiXuLy = :NguoiXuLy, 
+                          NgayXuLy = NOW(),
+                          GhiChuAdmin = :GhiChuAdmin
+                      WHERE ID = :ID";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':ID', (int)$id);
+            $stmt->bindValue(':NguoiXuLy', (int)$nguoiXuLy);
+            $stmt->bindValue(':GhiChuAdmin', $this->sanitize($ghiChu));
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("YeuCauDoiMatKhauModel::reject: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Đếm số yêu cầu đang chờ xử lý
+     */
+    public function countPending() {
+        try {
+            $query = "SELECT COUNT(*) as count FROM {$this->table_name} WHERE TrangThai = 'ChoXuLy'";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)$result['count'];
+        } catch (PDOException $e) {
+            error_log("YeuCauDoiMatKhauModel::countPending: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Cập nhật trạng thái yêu cầu (dùng cho HomeController)
+     * @param int $id ID yêu cầu
+     * @param string $trangThai Trạng thái mới (DaDuyet, TuChoi)
+     * @param int|string $nguoiXuLy Người xử lý
+     * @param string|null $matKhauMoi Mật khẩu mới (không lưu vào DB, chỉ để tham khảo)
+     * @param string|null $ghiChu Ghi chú
+     */
+    public function updateStatus($id, $trangThai, $nguoiXuLy = null, $matKhauMoi = null, $ghiChu = null) {
         try {
             $query = "UPDATE {$this->table_name} 
                       SET TrangThai = :TrangThai, 
                           NguoiXuLy = :NguoiXuLy, 
-                          NgayXuLy = NOW(),
-                          MatKhauMoi = :MatKhauMoi,
-                          GhiChu = :GhiChu
+                          NgayXuLy = NOW(), 
+                          GhiChuAdmin = :GhiChu 
                       WHERE ID = :ID";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindValue(':TrangThai', $trangThai);
+            $stmt->bindValue(':ID', (int)$id);
+            $stmt->bindValue(':TrangThai', $this->sanitize($trangThai));
             $stmt->bindValue(':NguoiXuLy', $nguoiXuLy);
-            $stmt->bindValue(':MatKhauMoi', $matKhauMoi);
-            $stmt->bindValue(':GhiChu', $ghiChu);
-            $stmt->bindValue(':ID', $id);
+            $stmt->bindValue(':GhiChu', $this->sanitize($ghiChu));
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log("YeuCauDoiMatKhauModel::updateStatus: " . $e->getMessage());
@@ -136,11 +222,12 @@ class YeuCauDoiMatKhauModel extends Model {
     /**
      * Xóa yêu cầu
      */
-    public function delete() {
+    public function delete($id = null) {
         try {
+            $deleteId = $id ?? $this->ID;
             $query = "DELETE FROM {$this->table_name} WHERE ID = :ID";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindValue(':ID', $this->ID);
+            $stmt->bindValue(':ID', (int)$deleteId);
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log("YeuCauDoiMatKhauModel::delete: " . $e->getMessage());

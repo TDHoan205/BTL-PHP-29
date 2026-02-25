@@ -111,7 +111,13 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Mã giảng viên <span class="text-danger">*</span></label>
-                            <input type="text" name="MaGiangVien" class="form-control" required>
+                            <div class="input-group">
+                                <input type="text" name="MaGiangVien" id="inputMaGiangVien" class="form-control" required>
+                                <span class="input-group-text bg-success text-white" id="autoIdBadge" style="display:none;">
+                                    <i class="fas fa-magic me-1"></i>Tự động
+                                </span>
+                            </div>
+                            <small class="text-muted">Mã sẽ được tự động điền khi mở form</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Họ tên <span class="text-danger">*</span></label>
@@ -175,6 +181,19 @@
 </div>
 
 <script>
+// Tự động lấy mã giảng viên khi mở modal
+document.getElementById('addModal').addEventListener('show.bs.modal', function() {
+    fetch('index.php?url=GiangVien/getNextId')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.nextId) {
+                document.getElementById('inputMaGiangVien').value = data.nextId;
+                document.getElementById('autoIdBadge').style.display = 'flex';
+            }
+        })
+        .catch(err => console.log('Không thể lấy mã tự động'));
+});
+
 // Tìm kiếm tự động
 document.getElementById('searchInput').addEventListener('keyup', function() {
     filterTable();

@@ -119,24 +119,37 @@ INSERT INTO `THOI_KHOA_BIEU` (`MaLopHocPhan`, `Thu`, `TietBatDau`, `TietKetThuc`
 -- PHẦN 6: TẠO BẢNG YEU_CAU_DOI_MAT_KHAU (QUÊN MẬT KHẨU)
 -- ============================================================================
 -- Bảng quản lý yêu cầu đổi mật khẩu từ sinh viên/giảng viên
+-- Quy trình: Người dùng gửi yêu cầu → Admin duyệt → Gửi email mật khẩu mới
 -- Admin sẽ duyệt và tạo mật khẩu mới cho người dùng
+
+-- Xóa bảng cũ nếu cần cập nhật cấu trúc mới
+-- DROP TABLE IF EXISTS `YEU_CAU_DOI_MAT_KHAU`;
 
 CREATE TABLE IF NOT EXISTS `YEU_CAU_DOI_MAT_KHAU` (
     `ID` INT AUTO_INCREMENT PRIMARY KEY,
+    `MaUser` INT NOT NULL COMMENT 'Mã người dùng trong bảng USER',
     `TenDangNhap` VARCHAR(50) NOT NULL COMMENT 'Tên đăng nhập của người yêu cầu',
-    `MaNguoiDung` VARCHAR(20) NOT NULL COMMENT 'Mã sinh viên hoặc mã giảng viên',
-    `VaiTro` ENUM('SinhVien', 'GiangVien') NOT NULL COMMENT 'Vai trò người yêu cầu',
+    `Email` VARCHAR(100) NOT NULL COMMENT 'Email để gửi mật khẩu mới',
+    `HoTen` VARCHAR(100) NOT NULL COMMENT 'Họ tên người yêu cầu',
+    `VaiTro` VARCHAR(20) NOT NULL COMMENT 'Vai trò: Admin, GiangVien, SinhVien',
+    `LyDo` TEXT NULL COMMENT 'Lý do quên mật khẩu (tùy chọn)',
     `NgayYeuCau` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian gửi yêu cầu',
     `TrangThai` ENUM('ChoXuLy', 'DaDuyet', 'TuChoi') DEFAULT 'ChoXuLy' COMMENT 'Trạng thái xử lý',
-    `MatKhauMoi` VARCHAR(255) NULL COMMENT 'Mật khẩu mới (đã hash) sau khi admin duyệt',
-    `NguoiXuLy` VARCHAR(50) NULL COMMENT 'Tên admin xử lý yêu cầu',
+    `NguoiXuLy` INT NULL COMMENT 'MaUser của admin xử lý',
     `NgayXuLy` DATETIME NULL COMMENT 'Thời gian admin xử lý',
-    `GhiChu` TEXT NULL COMMENT 'Ghi chú từ admin (lý do từ chối, ...)',
+    `GhiChuAdmin` TEXT NULL COMMENT 'Ghi chú từ admin (lý do từ chối, ...)',
     
     INDEX `idx_trang_thai` (`TrangThai`) COMMENT 'Index cho truy vấn theo trạng thái',
-    INDEX `idx_ten_dang_nhap` (`TenDangNhap`) COMMENT 'Index cho tìm kiếm theo tên đăng nhập'
+    INDEX `idx_ma_user` (`MaUser`) COMMENT 'Index cho tìm kiếm theo user',
+    INDEX `idx_ngay_yeu_cau` (`NgayYeuCau`) COMMENT 'Index cho sắp xếp theo ngày',
+    CONSTRAINT `fk_yc_user` FOREIGN KEY (`MaUser`) REFERENCES `USER`(`MaUser`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Bảng quản lý yêu cầu đổi mật khẩu - tính năng Quên mật khẩu';
+
+-- Thêm cột YeuCauDoiMatKhau vào bảng USER để đánh dấu cần đổi mật khẩu
+ALTER TABLE `USER` 
+ADD COLUMN IF NOT EXISTS `YeuCauDoiMatKhau` TINYINT(1) DEFAULT 0 
+COMMENT 'Đánh dấu người dùng cần đổi mật khẩu khi đăng nhập (1 = bắt buộc đổi)';
 
 
 -- ============================================================================
@@ -172,10 +185,11 @@ COMMENT='Bảng lưu token "Ghi nhớ đăng nhập" - An toàn, không lưu m�
 --   4. DESC YEU_CAU_DOI_MAT_KHAU; → Xem cấu trúc bảng yêu cầu đổi mật khẩu
 --   5. DESC REMEMBER_TOKENS; → Xem cấu trúc bảng ghi nhớ đăng nhập
 --   6. SELECT * FROM LOAI_DIEM; → Kiểm tra TX và TH đã bị xóa
---   7. DESC USER; → Kiểm tra cột Avatar đã được thêm
+--   7. DESC USER; → Kiểm tra cột Avatar và YeuCauDoiMatKhau đã được thêm
 --
 -- Nếu có lỗi:
 --   - Lỗi "Duplicate column name 'Avatar'" → Cột Avatar đã tồn tại, bỏ qua
+--   - Lỗi "Duplicate column name 'YeuCauDoiMatKhau'" → Cột đã tồn tại, bỏ qua
 --   - Lỗi "Table already exists" → Bảng đã tồn tại, bỏ qua
 --   - Lỗi foreign key → Kiểm tra file qldiem.sql đã import đầy đủ chưa
 -- ============================================================================

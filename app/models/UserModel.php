@@ -226,4 +226,99 @@ class UserModel extends Model {
 
         return $verify ? $user : false;
     }
+
+    /**
+     * Lấy thông tin người dùng theo email
+     */
+    public function getByEmail($email) {
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE Email = :Email AND Email IS NOT NULL AND Email != ''";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":Email", $email);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getByEmail: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Cập nhật mật khẩu theo MaUser
+     */
+    public function updatePassword($userId, $newPassword) {
+        try {
+            // Hash mật khẩu mới
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            $query = "UPDATE {$this->table_name} SET MatKhau = :MatKhau, NgayCapNhat = :NgayCapNhat WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MatKhau", $hashedPassword);
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
+            $stmt->bindValue(":MaUser", (int)$userId);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in updatePassword: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Đánh dấu người dùng cần đổi mật khẩu khi đăng nhập
+     */
+    public function setRequirePasswordChange($userId, $require = true) {
+        try {
+            $query = "UPDATE {$this->table_name} SET YeuCauDoiMatKhau = :YeuCau, NgayCapNhat = :NgayCapNhat WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":YeuCau", $require ? 1 : 0);
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
+            $stmt->bindValue(":MaUser", (int)$userId);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in setRequirePasswordChange: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Kiểm tra người dùng có cần đổi mật khẩu không
+     */
+    public function requiresPasswordChange($userId) {
+        try {
+            $query = "SELECT YeuCauDoiMatKhau FROM {$this->table_name} WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MaUser", (int)$userId);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return isset($result['YeuCauDoiMatKhau']) && $result['YeuCauDoiMatKhau'] == 1;
+        } catch (PDOException $e) {
+            error_log("Error in requiresPasswordChange: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Cập nhật mật khẩu và xóa cờ yêu cầu đổi mật khẩu
+     */
+    public function updatePasswordAndClearFlag($userId, $newPassword) {
+        try {
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            $query = "UPDATE {$this->table_name} 
+                      SET MatKhau = :MatKhau, 
+                          YeuCauDoiMatKhau = 0, 
+                          NgayCapNhat = :NgayCapNhat 
+                      WHERE MaUser = :MaUser";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(":MatKhau", $hashedPassword);
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
+            $stmt->bindValue(":MaUser", (int)$userId);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in updatePasswordAndClearFlag: " . $e->getMessage());
+            return false;
+        }
+    }
 }

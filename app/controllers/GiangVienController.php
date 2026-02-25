@@ -872,4 +872,14 @@ class GiangVienController extends Controller {
         
         $this->redirect('GiangVien/index');
     }
+
+    /**
+     * API: Lấy mã giảng viên tiếp theo (AJAX)
+     */
+    public function getNextId() {
+        header('Content-Type: application/json');
+        $nextId = $this->gvModel->generateNextId('GV');
+        echo json_encode(['success' => true, 'nextId' => $nextId]);
+        exit;
+    }
 }

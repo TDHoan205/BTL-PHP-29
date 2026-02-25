@@ -152,4 +152,14 @@ class MonHocController extends Controller {
         
         $this->redirect('MonHoc/index');
     }
+
+    /**
+     * API: Lấy mã môn học tiếp theo (AJAX)
+     */
+    public function getNextId() {
+        header('Content-Type: application/json');
+        $nextId = $this->monHocModel->generateNextId('MH');
+        echo json_encode(['success' => true, 'nextId' => $nextId]);
+        exit;
+    }
 }

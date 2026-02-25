@@ -157,7 +157,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Mã lớp HP <span class="text-danger">*</span></label>
-                        <input type="text" name="MaLopHocPhan" class="form-control" placeholder="VD: LHP001" required>
+                        <div class="input-group">
+                            <input type="text" name="MaLopHocPhan" id="inputMaLopHocPhan" class="form-control" placeholder="VD: LHP001" required>
+                            <span class="input-group-text bg-success text-white" id="autoIdBadge" style="display:none;">
+                                <i class="fas fa-magic me-1"></i>Tự động
+                            </span>
+                        </div>
+                        <small class="text-muted">Mã sẽ được tự động điền khi mở form</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Môn học <span class="text-danger">*</span></label>
@@ -259,6 +265,19 @@ function setAssignLop(maLop) {
     document.getElementById('inputMaLop').value = maLop;
     document.getElementById('displayMaLop').value = maLop;
 }
+
+// Tự động lấy mã lớp học phần khi mở modal
+document.getElementById('addModal').addEventListener('show.bs.modal', function() {
+    fetch('index.php?url=LopHocPhan/getNextId')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.nextId) {
+                document.getElementById('inputMaLopHocPhan').value = data.nextId;
+                document.getElementById('autoIdBadge').style.display = 'flex';
+            }
+        })
+        .catch(err => console.log('Không thể lấy mã tự động'));
+});
 
 // Tìm kiếm tự động
 document.getElementById('searchInput').addEventListener('keyup', function() {

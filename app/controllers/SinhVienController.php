@@ -577,4 +577,14 @@ class SinhVienController extends Controller {
         
         $this->redirect('SinhVien/index');
     }
+
+    /**
+     * API: Lấy mã sinh viên tiếp theo (AJAX)
+     */
+    public function getNextId() {
+        header('Content-Type: application/json');
+        $nextId = $this->svModel->generateNextId('SV');
+        echo json_encode(['success' => true, 'nextId' => $nextId]);
+        exit;
+    }
 }

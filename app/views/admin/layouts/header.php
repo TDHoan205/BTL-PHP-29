@@ -10,6 +10,19 @@
     <link href="<?php echo (defined('URLROOT') ? rtrim(URLROOT, '/') : '') . '/css/admin.css'; ?>" rel="stylesheet">
     <script>window.APP_BASE_URL = '<?php echo defined("URLROOT") ? rtrim(URLROOT, "/") : ""; ?>';</script>
     <script>(function(){var t=localStorage.getItem('app-theme');if(t==='dark')document.documentElement.classList.add('dark-theme');})();</script>
+    <?php
+    // Lấy số yêu cầu đổi mật khẩu đang chờ xử lý
+    $pendingPasswordRequests = 0;
+    try {
+        require_once __DIR__ . '/../../../models/YeuCauDoiMatKhauModel.php';
+        require_once __DIR__ . '/../../../config/Database.php';
+        $headerDb = new Database();
+        $headerYeuCauModel = new YeuCauDoiMatKhauModel($headerDb->getConnection());
+        $pendingPasswordRequests = $headerYeuCauModel->countPending();
+    } catch (Exception $e) {
+        $pendingPasswordRequests = 0;
+    }
+    ?>
 </head>
 <body>
     <!-- Sidebar -->
@@ -39,7 +52,14 @@
         <div class="sidebar-section">Hệ thống</div>
         <ul class="sidebar-menu">
             <li><a href="index.php?url=User/index" class="<?= strpos($_GET['url'] ?? '', 'User') !== false ? 'active' : '' ?>"><i class="fas fa-users-cog"></i> Tài khoản</a></li>
-            <li><a href="index.php?url=Home/quenMatKhau" class="<?= strpos($_GET['url'] ?? '', 'quenMatKhau') !== false ? 'active' : '' ?>"><i class="fas fa-key"></i> Yêu cầu đổi MK</a></li>
+            <li>
+                <a href="index.php?url=YeuCauDoiMatKhau/index" class="<?= strpos($_GET['url'] ?? '', 'YeuCauDoiMatKhau') !== false ? 'active' : '' ?>">
+                    <i class="fas fa-key"></i> Yêu cầu đổi MK
+                    <?php if ($pendingPasswordRequests > 0): ?>
+                    <span class="menu-badge"><?= $pendingPasswordRequests ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
             <li><a href="index.php?url=ThongKe/index" class="<?= strpos($_GET['url'] ?? '', 'ThongKe') !== false ? 'active' : '' ?>"><i class="fas fa-chart-bar"></i> Thống kê</a></li>
         </ul>
         
@@ -68,10 +88,12 @@
                 </nav>
             </div>
             <div class="header-actions">
-                <div class="notification-badge">
+                <a href="index.php?url=YeuCauDoiMatKhau/index" class="notification-badge" title="Yêu cầu đổi mật khẩu">
                     <i class="fas fa-bell" style="font-size: 18px; color: #64748b; cursor: pointer;"></i>
-                    <span class="badge">3</span>
-                </div>
+                    <?php if ($pendingPasswordRequests > 0): ?>
+                    <span class="badge"><?= $pendingPasswordRequests ?></span>
+                    <?php endif; ?>
+                </a>
                 <div class="dropdown">
                     <div class="user-profile" data-bs-toggle="dropdown">
                         <?php $avtUrl = !empty($_SESSION['user_avatar']) ? rtrim(defined('URLROOT') ? URLROOT : '', '/') . '/' . ltrim($_SESSION['user_avatar'], '/') : ''; ?>

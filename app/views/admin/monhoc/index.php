@@ -102,7 +102,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Mã môn <span class="text-danger">*</span></label>
-                        <input type="text" name="MaMonHoc" class="form-control" placeholder="VD: MH001" required>
+                        <div class="input-group">
+                            <input type="text" name="MaMonHoc" id="inputMaMonHoc" class="form-control" placeholder="VD: MH001" required>
+                            <span class="input-group-text bg-success text-white" id="autoIdBadge" style="display:none;">
+                                <i class="fas fa-magic me-1"></i>Tự động
+                            </span>
+                        </div>
+                        <small class="text-muted">Mã sẽ được tự động điền khi mở form</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên môn học <span class="text-danger">*</span></label>
@@ -150,6 +156,19 @@
 </div>
 
 <script>
+// Tự động lấy mã môn học khi mở modal
+document.getElementById('addModal').addEventListener('show.bs.modal', function() {
+    fetch('index.php?url=MonHoc/getNextId')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.nextId) {
+                document.getElementById('inputMaMonHoc').value = data.nextId;
+                document.getElementById('autoIdBadge').style.display = 'flex';
+            }
+        })
+        .catch(err => console.log('Không thể lấy mã tự động'));
+});
+
 // Tìm kiếm tự động
 document.getElementById('searchInput').addEventListener('keyup', function() {
     filterTable();

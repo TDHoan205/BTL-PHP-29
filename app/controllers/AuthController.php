@@ -129,6 +129,14 @@ class AuthController extends Controller {
                     }
                 }
                 
+                // Kiểm tra xem user có cần đổi mật khẩu không
+                if ($this->userModel->requiresPasswordChange($userData['MaUser'])) {
+                    $_SESSION['require_password_change'] = true;
+                    $_SESSION['temp_login'] = true;
+                    header('Location: index.php?url=Auth/changePassword');
+                    exit;
+                }
+                
                 // Redirect theo role
                 $this->redirectByRole($selectedRole, $userData['VaiTro']);
             } else {
@@ -243,6 +251,98 @@ class AuthController extends Controller {
     }
     
     /**
+     * Hiển thị trang đổi mật khẩu bắt buộc
+     */
+    public function changePassword() {
+        // Kiểm tra đã đăng nhập chưa
+        if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+            header('Location: index.php?url=Auth/index');
+            exit;
+        }
+        
+        // Kiểm tra có yêu cầu đổi mật khẩu không
+        if (!isset($_SESSION['require_password_change']) || !$_SESSION['require_password_change']) {
+            // Nếu không cần đổi mật khẩu, redirect về trang chính
+            $this->redirectByRole($_SESSION['login_type'] ?? 'admin', $_SESSION['user_role']);
+            return;
+        }
+        
+        require_once __DIR__ . '/../views/auth/changepassword.php';
+    }
+    
+    /**
+     * Xử lý đổi mật khẩu bắt buộc
+     */
+    public function submitChangePassword() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?url=Auth/changePassword');
+            exit;
+        }
+        
+        // Kiểm tra session
+        if (!isset($_SESSION['logged_in']) || !isset($_SESSION['require_password_change'])) {
+            header('Location: index.php?url=Auth/index');
+            exit;
+        }
+        
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        
+        // Validate
+        if (empty($newPassword) || empty($confirmPassword)) {
+            $error = 'Vui lòng nhập đầy đủ thông tin!';
+            require_once __DIR__ . '/../views/auth/changepassword.php';
+            return;
+        }
+        
+        if (strlen($newPassword) < 6) {
+            $error = 'Mật khẩu mới phải có ít nhất 6 ký tự!';
+            require_once __DIR__ . '/../views/auth/changepassword.php';
+            return;
+        }
+        
+        if ($newPassword !== $confirmPassword) {
+            $error = 'Mật khẩu xác nhận không khớp!';
+            require_once __DIR__ . '/../views/auth/changepassword.php';
+            return;
+        }
+        
+        // Cập nhật mật khẩu và xóa flag
+        $userId = $_SESSION['user_id'];
+        $result = $this->userModel->updatePasswordAndClearFlag($userId, $newPassword);
+        
+        if ($result) {
+            // Xóa session flag
+            unset($_SESSION['require_password_change']);
+            unset($_SESSION['temp_login']);
+            
+            // Redirect về trang chính theo role
+            $_SESSION['flash_success'] = 'Đổi mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập.';
+            $this->redirectByRole($_SESSION['login_type'] ?? 'admin', $_SESSION['user_role']);
+        } else {
+            $error = 'Có lỗi xảy ra. Vui lòng thử lại!';
+            require_once __DIR__ . '/../views/auth/changepassword.php';
+        }
+    }
+    
+    /**
+     * Bỏ qua đổi mật khẩu (giữ mật khẩu tạm)
+     */
+    public function skipChangePassword() {
+        if (!isset($_SESSION['logged_in'])) {
+            header('Location: index.php?url=Auth/index');
+            exit;
+        }
+        
+        // Xóa flag và cho phép tiếp tục
+        unset($_SESSION['require_password_change']);
+        unset($_SESSION['temp_login']);
+        
+        // Nhưng vẫn giữ cờ trong DB để nhắc lại lần sau
+        $this->redirectByRole($_SESSION['login_type'] ?? 'admin', $_SESSION['user_role']);
+    }
+    
+    /**
      * Hiển thị trang quên mật khẩu
      */
     public function forgotPassword() {
@@ -250,7 +350,7 @@ class AuthController extends Controller {
     }
     
     /**
-     * Xử lý yêu cầu quên mật khẩu
+     * Xử lý yêu cầu quên mật khẩu - Gửi yêu cầu đến Admin
      */
     public function submitForgotPassword() {
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
@@ -258,76 +358,164 @@ class AuthController extends Controller {
             exit;
         }
         
+        // Load YeuCauDoiMatKhauModel
         require_once __DIR__ . '/../models/YeuCauDoiMatKhauModel.php';
-        require_once __DIR__ . '/../models/SinhVienModel.php';
-        require_once __DIR__ . '/../models/GiangVienModel.php';
-        
-        $username = trim($_POST['username'] ?? '');
-        $maNguoiDung = trim($_POST['maNguoiDung'] ?? '');
-        $vaiTro = trim($_POST['vaiTro'] ?? 'GiangVien');
-        
-        if (empty($username) || empty($maNguoiDung)) {
-            $error = 'Vui lòng nhập đầy đủ thông tin!';
-            require_once __DIR__ . '/../views/auth/forgotpassword.php';
-            return;
-        }
-        
-        // Kiểm tra user có tồn tại không
-        $users = $this->userModel->readAll();
-        $userExists = false;
-        foreach ($users as $user) {
-            if ($user['TenDangNhap'] === $username) {
-                $userExists = true;
-                break;
-            }
-        }
-        
-        if (!$userExists) {
-            $error = 'Tên đăng nhập không tồn tại trong hệ thống!';
-            require_once __DIR__ . '/../views/auth/forgotpassword.php';
-            return;
-        }
-        
-        // Kiểm tra mã sinh viên hoặc giảng viên
         $db = new Database();
-        $conn = $db->getConnection();
-        $isValid = false;
+        $yeuCauModel = new YeuCauDoiMatKhauModel($db->getConnection());
         
-        if ($vaiTro === 'SinhVien') {
-            $svModel = new SinhVienModel($conn);
-            $sv = $svModel->getById($maNguoiDung);
-            $isValid = ($sv !== null);
-        } else {
-            $gvModel = new GiangVienModel($conn);
-            $gv = $gvModel->getById($maNguoiDung);
-            $isValid = ($gv !== null);
-        }
+        $email = trim($_POST['email'] ?? '');
+        $lyDo = trim($_POST['lydo'] ?? '');
         
-        if (!$isValid) {
-            $error = 'Mã ' . ($vaiTro === 'SinhVien' ? 'sinh viên' : 'giảng viên') . ' không đúng!';
+        if (empty($email)) {
+            $error = 'Vui lòng nhập địa chỉ email!';
             require_once __DIR__ . '/../views/auth/forgotpassword.php';
             return;
         }
         
-        // Kiểm tra đã có yêu cầu chưa
-        $yeuCauModel = new YeuCauDoiMatKhauModel($conn);
-        if ($yeuCauModel->hasRequestPending($username, $maNguoiDung)) {
-            $error = 'Bạn đã có yêu cầu đang chờ xử lý. Vui lòng chờ admin xác nhận!';
+        // Kiểm tra định dạng email
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Địa chỉ email không hợp lệ!';
+            require_once __DIR__ . '/../views/auth/forgotpassword.php';
+            return;
+        }
+        
+        // Tìm user theo email
+        $user = $this->userModel->getByEmail($email);
+        
+        if (!$user) {
+            // Không tiết lộ email có tồn tại hay không (bảo mật)
+            $success = 'Yêu cầu của bạn đã được gửi đến Quản trị viên. Nếu email này tồn tại trong hệ thống, bạn sẽ nhận được mật khẩu mới qua email sau khi Admin duyệt.';
+            require_once __DIR__ . '/../views/auth/forgotpassword.php';
+            return;
+        }
+        
+        // Kiểm tra xem user đã có yêu cầu đang chờ xử lý chưa
+        if ($yeuCauModel->hasRequestPending($user['MaUser'])) {
+            $error = 'Bạn đã có một yêu cầu đang chờ xử lý. Vui lòng đợi Admin duyệt hoặc liên hệ trực tiếp với Quản trị viên.';
             require_once __DIR__ . '/../views/auth/forgotpassword.php';
             return;
         }
         
         // Tạo yêu cầu mới
-        $yeuCauModel->TenDangNhap = $username;
-        $yeuCauModel->MaNguoiDung = $maNguoiDung;
-        $yeuCauModel->VaiTro = $vaiTro;
+        $requestData = [
+            'MaUser' => $user['MaUser'],
+            'TenDangNhap' => $user['TenDangNhap'],
+            'Email' => $user['Email'],
+            'HoTen' => $user['HoTen'],
+            'VaiTro' => $user['VaiTro'],
+            'LyDo' => $lyDo ?: 'Không cung cấp lý do'
+        ];
         
-        if ($yeuCauModel->create()) {
-            $success = 'Yêu cầu của bạn đã được gửi! Vui lòng chờ admin xác nhận và cấp lại mật khẩu.';
-            require_once __DIR__ . '/../views/auth/forgotpassword.php';
+        $result = $yeuCauModel->create($requestData);
+        
+        if ($result) {
+            $success = 'Yêu cầu khôi phục mật khẩu đã được gửi thành công! Vui lòng chờ Admin xem xét và duyệt. Mật khẩu mới sẽ được gửi đến email của bạn.';
         } else {
-            $error = 'Có lỗi xảy ra! Vui lòng thử lại sau.';
-            require_once __DIR__ . '/../views/auth/forgotpassword.php';
+            $error = 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau!';
         }
+        
+        require_once __DIR__ . '/../views/auth/forgotpassword.php';
+    }
+    
+    /**
+     * Che dấu email để bảo mật
+     */
+    private function maskEmail($email) {
+        $parts = explode('@', $email);
+        $name = $parts[0];
+        $domain = $parts[1];
+        
+        $maskedName = substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 4, 2)) . substr($name, -2);
+        return $maskedName . '@' . $domain;
+    }
+    
+    /**
+     * Tạo mật khẩu ngẫu nhiên
+     */
+    private function generateRandomPassword($length = 8) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+        return $password;
+    }
+    
+    /**
+     * Gửi email chứa mật khẩu mới qua SMTP
+     */
+    private function sendPasswordResetEmail($emailService, $toEmail, $fullName, $username, $newPassword) {
+        $subject = '[UNISCORE] Mật khẩu mới của bạn';
+        
+        $htmlBody = '
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 10px 0 0; opacity: 0.9; }
+        .content { padding: 30px; background: #ffffff; }
+        .content h2 { color: #1e293b; margin-top: 0; }
+        .info-row { background: #f8fafc; padding: 12px 15px; border-radius: 8px; margin: 15px 0; }
+        .info-row strong { color: #475569; }
+        .password-box { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #3b82f6; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0; }
+        .password-label { color: #64748b; font-size: 14px; margin: 0 0 10px; }
+        .password { font-size: 32px; font-weight: bold; color: #1d4ed8; letter-spacing: 3px; margin: 0; font-family: monospace; }
+        .warning { background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 15px 20px; margin: 25px 0; }
+        .warning-title { color: #92400e; font-weight: bold; margin: 0 0 10px; }
+        .warning ul { margin: 0; padding-left: 20px; color: #78350f; }
+        .warning li { margin: 5px 0; }
+        .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
+        .footer p { margin: 5px 0; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 UNISCORE</h1>
+            <p>Hệ thống Quản lý Điểm Sinh viên</p>
+        </div>
+        <div class="content">
+            <h2>Xin chào ' . htmlspecialchars($fullName) . ',</h2>
+            <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn trên hệ thống UNISCORE.</p>
+            
+            <div class="info-row">
+                <strong>👤 Tên đăng nhập:</strong> ' . htmlspecialchars($username) . '
+            </div>
+            
+            <div class="password-box">
+                <p class="password-label">🔐 Mật khẩu mới của bạn là:</p>
+                <p class="password">' . htmlspecialchars($newPassword) . '</p>
+            </div>
+            
+            <div class="warning">
+                <p class="warning-title">⚠️ Lưu ý quan trọng:</p>
+                <ul>
+                    <li>Vui lòng <strong>đăng nhập và đổi mật khẩu ngay</strong> sau khi nhận được email này</li>
+                    <li>Không chia sẻ mật khẩu này với bất kỳ ai</li>
+                    <li>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng liên hệ Quản trị viên ngay</li>
+                </ul>
+            </div>
+            
+            <p style="text-align: center;">
+                <a href="' . (defined('URLROOT') ? URLROOT : '') . '" class="btn">Đăng nhập ngay</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>Email này được gửi tự động từ hệ thống UNISCORE.</p>
+            <p>Vui lòng không trả lời email này.</p>
+            <p>© ' . date('Y') . ' UNISCORE - Quản lý điểm sinh viên</p>
+        </div>
+    </div>
+</body>
+</html>';
+        
+        // Gửi email qua SMTP
+        return $emailService->send($toEmail, $subject, base64_encode($htmlBody), $fullName);
     }
 }

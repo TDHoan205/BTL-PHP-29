@@ -172,4 +172,35 @@ class SinhVienModel extends Model {
             return [];
         }
     }
+
+    /**
+     * Tạo mã sinh viên tiếp theo tự động
+     * Format: SV001, SV002, ...
+     */
+    public function generateNextId($prefix = 'SV') {
+        try {
+            $query = "SELECT MaSinhVien FROM {$this->table_name} 
+                      WHERE MaSinhVien LIKE :prefix 
+                      ORDER BY MaSinhVien DESC LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':prefix', $prefix . '%');
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                // Lấy số từ mã hiện tại (ví dụ: SV015 -> 15)
+                $currentId = $result['MaSinhVien'];
+                $number = intval(preg_replace('/[^0-9]/', '', $currentId));
+                $nextNumber = $number + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            
+            // Format với padding 3 số (001, 002, ...)
+            return $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } catch (PDOException $e) {
+            error_log("Error in generateNextId: " . $e->getMessage());
+            return $prefix . '001';
+        }
+    }
 }

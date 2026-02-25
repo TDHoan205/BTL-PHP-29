@@ -200,4 +200,14 @@ class LopHocPhanController extends Controller {
         $data = $this->buildIndexData($result);
         require_once __DIR__ . '/../views/admin/lophocphan/index.php';
     }
+
+    /**
+     * API: Lấy mã lớp học phần tiếp theo (AJAX)
+     */
+    public function getNextId() {
+        header('Content-Type: application/json');
+        $nextId = $this->lhpModel->generateNextId('LHP');
+        echo json_encode(['success' => true, 'nextId' => $nextId]);
+        exit;
+    }
 }

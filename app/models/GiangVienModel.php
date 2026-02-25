@@ -153,4 +153,33 @@ class GiangVienModel extends Model {
             return [];
         }
     }
+
+    /**
+     * Tạo mã giảng viên tiếp theo tự động
+     * Format: GV001, GV002, ...
+     */
+    public function generateNextId($prefix = 'GV') {
+        try {
+            $query = "SELECT MaGiangVien FROM {$this->table_name} 
+                      WHERE MaGiangVien LIKE :prefix 
+                      ORDER BY MaGiangVien DESC LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':prefix', $prefix . '%');
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                $currentId = $result['MaGiangVien'];
+                $number = intval(preg_replace('/[^0-9]/', '', $currentId));
+                $nextNumber = $number + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            
+            return $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } catch (PDOException $e) {
+            error_log("Error in generateNextId: " . $e->getMessage());
+            return $prefix . '001';
+        }
+    }
 }

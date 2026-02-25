@@ -159,4 +159,33 @@ class LopHocPhanModel extends Model {
             return $this->handlePdoException($e, 'LopHocPhanModel::delete');
         }
     }
+
+    /**
+     * Tạo mã lớp học phần tiếp theo tự động
+     * Format: LHP001, LHP002, ...
+     */
+    public function generateNextId($prefix = 'LHP') {
+        try {
+            $query = "SELECT MaLopHocPhan FROM {$this->table_name} 
+                      WHERE MaLopHocPhan LIKE :prefix 
+                      ORDER BY MaLopHocPhan DESC LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':prefix', $prefix . '%');
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                $currentId = $result['MaLopHocPhan'];
+                $number = intval(preg_replace('/[^0-9]/', '', $currentId));
+                $nextNumber = $number + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            
+            return $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } catch (PDOException $e) {
+            error_log("Error in generateNextId: " . $e->getMessage());
+            return $prefix . '001';
+        }
+    }
 }

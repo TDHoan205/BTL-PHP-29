@@ -17,6 +17,8 @@
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        html { overflow-y: auto; overflow-x: hidden; }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
@@ -25,18 +27,17 @@
             justify-content: center;
             background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
             position: relative;
-            overflow: hidden;
+            padding: 20px 0;
         }
         
         body::before {
             content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
             animation: float 30s linear infinite;
+            z-index: 0;
         }
         
         @keyframes float {
@@ -48,7 +49,7 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             padding: 20px;
         }
         
@@ -57,35 +58,28 @@
             backdrop-filter: blur(20px);
             border-radius: 24px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            padding: 50px 40px;
+            padding: 40px 35px;
             text-align: center;
         }
         
         .logo-container {
-            width: 90px;
-            height: 90px;
+            width: 80px; height: 80px;
             background: linear-gradient(135deg, #f59e0b, #d97706);
-            border-radius: 24px;
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 25px;
+            margin: 0 auto 20px;
             box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
             transform: rotate(-5deg);
             transition: transform 0.3s ease;
         }
         
-        .logo-container:hover {
-            transform: rotate(0deg) scale(1.05);
-        }
-        
-        .logo-container i {
-            font-size: 40px;
-            color: white;
-        }
+        .logo-container:hover { transform: rotate(0deg) scale(1.05); }
+        .logo-container i { font-size: 36px; color: white; }
         
         .forgot-card h2 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #1e293b;
             margin-bottom: 8px;
@@ -94,62 +88,22 @@
         .forgot-card .subtitle {
             color: #64748b;
             font-size: 14px;
-            margin-bottom: 35px;
-            line-height: 1.6;
-        }
-        
-        .role-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        
-        .role-btn {
-            flex: 1;
-            padding: 15px 10px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-        
-        .role-btn:hover {
-            border-color: var(--primary-color);
-            background: #f8fafc;
-        }
-        
-        .role-btn.active {
-            border-color: var(--primary-color);
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.05));
-        }
-        
-        .role-btn i {
-            font-size: 24px;
-            color: var(--primary-color);
-            display: block;
-            margin-bottom: 8px;
-        }
-        
-        .role-btn span {
-            font-size: 13px;
-            font-weight: 600;
-            color: #475569;
+            margin-bottom: 25px;
+            line-height: 1.5;
         }
         
         .form-group {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             text-align: left;
         }
         
         .form-group label {
             display: block;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #374151;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .input-wrapper {
@@ -158,51 +112,54 @@
         
         .input-wrapper i {
             position: absolute;
-            left: 16px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
             transition: color 0.3s;
         }
         
-        .input-wrapper input {
+        .input-wrapper input, .input-wrapper textarea {
             width: 100%;
-            padding: 14px 16px 14px 48px;
+            padding: 12px 14px 12px 42px;
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 15px;
+            border-radius: 10px;
+            font-size: 14px;
             transition: all 0.3s ease;
             background: #f8fafc;
         }
         
-        .input-wrapper input:focus {
+        .input-wrapper textarea {
+            padding-left: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .input-wrapper input:focus, .input-wrapper textarea:focus {
             outline: none;
             border-color: var(--primary-color);
             background: white;
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
         }
         
-        .input-wrapper input:focus + i,
-        .input-wrapper:focus-within i {
-            color: var(--primary-color);
-        }
+        .input-wrapper:focus-within i { color: var(--primary-color); }
         
         .btn-submit {
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            margin-top: 25px;
+            gap: 8px;
+            margin-top: 20px;
         }
         
         .btn-submit:hover {
@@ -210,18 +167,21 @@
             box-shadow: 0 10px 25px rgba(245, 158, 11, 0.35);
         }
         
-        .btn-submit:active {
-            transform: translateY(0);
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .alert {
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin-bottom: 25px;
-            font-size: 14px;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
+            text-align: left;
         }
         
         .alert-danger {
@@ -236,10 +196,43 @@
             color: #16a34a;
         }
         
+        .alert-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #d97706;
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .info-box h4 {
+            color: #0369a1;
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .info-box ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #475569;
+            font-size: 12px;
+        }
+        
+        .info-box li { margin-bottom: 4px; }
+        
         .back-link {
-            margin-top: 20px;
+            margin-top: 18px;
             color: #64748b;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .back-link a {
@@ -248,30 +241,88 @@
             font-weight: 500;
         }
         
-        .back-link a:hover {
-            text-decoration: underline;
-        }
+        .back-link a:hover { text-decoration: underline; }
         
         .shape {
-            position: absolute;
+            position: fixed;
             border-radius: 50%;
             opacity: 0.1;
+            z-index: 0;
         }
         
-        .shape-1 {
-            width: 300px;
-            height: 300px;
-            background: white;
-            top: -100px;
-            right: -100px;
+        .shape-1 { width: 300px; height: 300px; background: white; top: -100px; right: -100px; }
+        .shape-2 { width: 200px; height: 200px; background: white; bottom: -50px; left: -50px; }
+        
+        .spinner {
+            display: none;
+            width: 18px; height: 18px;
+            border: 2px solid #ffffff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
         
-        .shape-2 {
-            width: 200px;
-            height: 200px;
-            background: white;
-            bottom: -50px;
-            left: -50px;
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .success-icon {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        
+        .success-icon i { font-size: 40px; color: white; }
+        
+        .timeline {
+            text-align: left;
+            padding: 15px 0;
+        }
+        
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding-bottom: 15px;
+            position: relative;
+        }
+        
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 28px;
+            width: 2px;
+            height: calc(100% - 20px);
+            background: #e2e8f0;
+        }
+        
+        .timeline-dot {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .timeline-dot.active { background: #10b981; }
+        .timeline-dot.pending { background: #f59e0b; }
+        .timeline-dot i { font-size: 10px; color: white; }
+        
+        .timeline-content h5 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+        
+        .timeline-content p {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0;
         }
     </style>
 </head>
@@ -281,91 +332,124 @@
     
     <div class="forgot-container">
         <div class="forgot-card">
-            <div class="logo-container">
-                <i class="fas fa-key"></i>
-            </div>
-            <h2>Quên mật khẩu?</h2>
-            <p class="subtitle">Nhập tên đăng nhập và mã sinh viên/giảng viên của bạn.<br>Admin sẽ xác nhận và cấp lại mật khẩu mới.</p>
-            
-            <?php if(isset($error)): ?>
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i>
-                <?= htmlspecialchars($error) ?>
-            </div>
-            <?php endif; ?>
-            
             <?php if(isset($success)): ?>
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i>
-                <?= htmlspecialchars($success) ?>
-            </div>
+                <!-- Hiển thị khi gửi yêu cầu thành công -->
+                <div class="success-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <h2>Yêu cầu đã được gửi!</h2>
+                <p class="subtitle">Yêu cầu khôi phục mật khẩu của bạn đã được gửi đến Quản trị viên.</p>
+                
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <span><?= htmlspecialchars($success) ?></span>
+                </div>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot active"><i class="fas fa-check"></i></div>
+                        <div class="timeline-content">
+                            <h5>Gửi yêu cầu</h5>
+                            <p>Bạn đã gửi yêu cầu thành công</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot pending"><i class="fas fa-clock"></i></div>
+                        <div class="timeline-content">
+                            <h5>Chờ duyệt</h5>
+                            <p>Admin sẽ xem xét và duyệt yêu cầu</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"><i class="fas fa-envelope"></i></div>
+                        <div class="timeline-content">
+                            <h5>Nhận mật khẩu mới</h5>
+                            <p>Mật khẩu mới sẽ được gửi qua email</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"><i class="fas fa-key"></i></div>
+                        <div class="timeline-content">
+                            <h5>Đăng nhập và đổi mật khẩu</h5>
+                            <p>Đăng nhập và tạo mật khẩu mới dễ nhớ</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="back-link">
+                    <a href="index.php?url=Auth/index"><i class="fas fa-arrow-left"></i> Quay lại đăng nhập</a>
+                </p>
+            <?php else: ?>
+                <!-- Form gửi yêu cầu -->
+                <div class="logo-container">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h2>Quên mật khẩu?</h2>
+                <p class="subtitle">Nhập email đã đăng ký để gửi yêu cầu khôi phục mật khẩu.<br>Admin sẽ xem xét và gửi mật khẩu mới qua email.</p>
+                
+                <?php if(isset($error)): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span><?= htmlspecialchars($error) ?></span>
+                </div>
+                <?php endif; ?>
+                
+                <div class="info-box">
+                    <h4><i class="fas fa-info-circle"></i> Quy trình khôi phục</h4>
+                    <ul>
+                        <li>Bạn gửi yêu cầu với email đã đăng ký</li>
+                        <li>Admin xem xét và duyệt yêu cầu</li>
+                        <li>Mật khẩu mới được gửi đến email của bạn</li>
+                        <li>Đăng nhập và đổi sang mật khẩu dễ nhớ hơn</li>
+                    </ul>
+                </div>
+                
+                <form action="index.php?url=Auth/submitForgotPassword" method="POST" id="forgotForm">
+                    <div class="form-group">
+                        <label>Địa chỉ Email <span style="color: #dc2626;">*</span></label>
+                        <div class="input-wrapper">
+                            <input type="email" name="email" id="email" placeholder="Nhập email đã đăng ký trong hệ thống" required>
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Lý do (không bắt buộc)</label>
+                        <div class="input-wrapper">
+                            <textarea name="lydo" placeholder="Mô tả ngắn gọn lý do quên mật khẩu (ví dụ: quên mật khẩu, đổi thiết bị...)" maxlength="500"></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="spinner" id="spinner"></span>
+                        <i class="fas fa-paper-plane" id="btnIcon"></i>
+                        <span id="btnText">Gửi yêu cầu đến Admin</span>
+                    </button>
+                </form>
+                
+                <p class="back-link">
+                    <a href="index.php?url=Auth/index"><i class="fas fa-arrow-left"></i> Quay lại đăng nhập</a>
+                </p>
             <?php endif; ?>
             
-            <!-- Role Selector -->
-            <div class="role-selector">
-                <div class="role-btn active" data-role="GiangVien" onclick="selectRole(this)">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                    <span>Giảng viên</span>
-                </div>
-                <div class="role-btn" data-role="SinhVien" onclick="selectRole(this)">
-                    <i class="fas fa-user-graduate"></i>
-                    <span>Sinh viên</span>
-                </div>
-            </div>
-            
-            <form action="index.php?url=Auth/submitForgotPassword" method="POST">
-                <input type="hidden" name="vaiTro" id="selectedRole" value="GiangVien">
-                
-                <div class="form-group">
-                    <label>Tên đăng nhập</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="username" placeholder="Nhập tên đăng nhập" required>
-                        <i class="fas fa-user"></i>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label id="maNguoiDungLabel">Mã Giảng Viên</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="maNguoiDung" id="maNguoiDung" placeholder="Nhập mã giảng viên" required>
-                        <i class="fas fa-id-card"></i>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-paper-plane"></i>
-                    Gửi yêu cầu
-                </button>
-            </form>
-            
-            <p class="back-link">
-                <a href="index.php?url=Auth/index"><i class="fas fa-arrow-left"></i> Quay lại đăng nhập</a>
-            </p>
-            
-            <p class="footer-text" style="margin-top: 20px; color: #94a3b8; font-size: 13px;">
+            <p style="margin-top: 18px; color: #94a3b8; font-size: 12px;">
                 © <?= date('Y') ?> <strong style="color: #2563eb;">UNISCORE</strong> - Quản lý điểm sinh viên
             </p>
         </div>
     </div>
     
     <script>
-        function selectRole(element) {
-            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
-            element.classList.add('active');
-            const role = element.dataset.role;
-            document.getElementById('selectedRole').value = role;
+        document.getElementById('forgotForm')?.addEventListener('submit', function() {
+            const btn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('spinner');
+            const icon = document.getElementById('btnIcon');
+            const text = document.getElementById('btnText');
             
-            // Update label and placeholder
-            const label = document.getElementById('maNguoiDungLabel');
-            const input = document.getElementById('maNguoiDung');
-            if (role === 'SinhVien') {
-                label.textContent = 'Mã Sinh Viên';
-                input.placeholder = 'Nhập mã sinh viên';
-            } else {
-                label.textContent = 'Mã Giảng Viên';
-                input.placeholder = 'Nhập mã giảng viên';
-            }
-        }
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            text.textContent = 'Đang gửi yêu cầu...';
+        });
     </script>
 </body>
 </html>
