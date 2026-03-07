@@ -30,15 +30,17 @@ $baseUrl = defined('URLROOT') ? URLROOT : '';
         </div>
         <nav class="sidebar__nav">
             <div class="nav-section-title">Tổng quan</div>
-            <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-item" style="text-decoration: none;"><div class="nav-item__icon">🏠</div><div>Bảng điều khiển</div></a>
+            <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-item" style="text-decoration: none;">
+                <div class="nav-item__icon">🏠</div><div>Bảng điều khiển</div>
+            </a>
             <div class="nav-section-title">Giảng dạy</div>
-            <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-item nav-item--active" style="text-decoration: none;">
+            <a href="<?php echo $baseUrl; ?>/GiangVien/indexLopHocPhan" class="nav-item nav-item--active" style="text-decoration: none;">
                 <div class="nav-item__icon">📚</div><div>Lớp & môn được dạy</div><div class="nav-item__chevron">▾</div>
             </a>
             <div class="nav-children">
-                <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-child nav-child--active" style="text-decoration: none;">Danh sách lớp và sinh viên</a>
+                <a href="<?php echo $baseUrl; ?>/GiangVien/indexLopHocPhan" class="nav-child nav-child--active" style="text-decoration: none;">Danh sách lớp và sinh viên</a>
             </div>
-            <div class="nav-section-title">Khác</div>
+            <div class="nav-section-title">Chức năng</div>
             <a href="<?php echo $baseUrl; ?>/GiangVien/nhapDiem" class="nav-item" style="text-decoration: none;"><div class="nav-item__icon">📝</div><div>Nhập điểm</div></a>
             <a href="<?php echo $baseUrl; ?>/GiangVien/traCuuDiem" class="nav-item" style="text-decoration: none;"><div class="nav-item__icon">🔍</div><div>Tra cứu điểm</div></a>
             <a href="<?php echo $baseUrl; ?>/GiangVien/guiThongBao" class="nav-item" style="text-decoration: none;"><div class="nav-item__icon">📧</div><div>Gửi thông báo</div></a>

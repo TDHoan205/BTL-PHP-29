@@ -587,4 +587,272 @@ class SinhVienController extends Controller {
         echo json_encode(['success' => true, 'nextId' => $nextId]);
         exit;
     }
+
+    /**
+     * Đăng ký học phần - Danh sách các lớp học phần đang mở
+     */
+    public function dangKyHoc() {
+        $sinhVien = $this->getSinhVienPortalData();
+        $maSV = $sinhVien['MaSinhVien'] ?? '';
+        
+        $hocKyModel = $this->model('HocKyModel');
+        $lhpModel = $this->model('LopHocPhanModel');
+        $dkhModel = $this->model('DangKyHocModel');
+        
+        // Lấy học kỳ hiện tại
+        $hocKyHienTai = $hocKyModel->getCurrentHocKy();
+        $maHKHienTai = $hocKyHienTai['MaHocKy'] ?? null;
+        
+        // Lấy tất cả học kỳ (cho dropdown)
+        $hocKys = $hocKyModel->readAll();
+        
+        // Lọc theo học kỳ (mặc định là học kỳ hiện tại)
+        $maHK = $_GET['maHocKy'] ?? $maHKHienTai;
+        $maMon = $_GET['maMon'] ?? '';
+        $tuKhoa = $_GET['tuKhoa'] ?? '';
+        
+        // Lấy danh sách lớp học phần đang mở
+        $danhSachLHP = $lhpModel->getAvailableForRegistration($maHK);
+        
+        // Lấy danh sách môn học cho dropdown lọc
+        $monHocList = $lhpModel->getMonHocForFilter($maHK);
+        
+        // Lấy danh sách môn đã đăng ký của sinh viên
+        $dangKys = $dkhModel->getByMaSinhVienWithDetails($maSV);
+        $maLopDaDangKy = [];
+        foreach ($dangKys as $dk) {
+            $maLopDaDangKy[] = $dk['MaLopHocPhan'];
+        }
+        
+        // Lấy lịch học của từng lớp học phần
+        $lichHocByLHP = [];
+        foreach ($danhSachLHP as &$lhp) {
+            $maLHP = $lhp['MaLopHocPhan'];
+            $schedule = $lhpModel->getSchedule($maLHP);
+            $lichHocByLHP[$maLHP] = $schedule;
+            
+            // Tính sĩ số còn lại
+            $lhp['SiSoConLai'] = (int)$lhp['SoLuongToiDa'] - (int)$lhp['SiSoDangKy'];
+            $lhp['DaDangKy'] = in_array($maLHP, $maLopDaDangKy);
+        }
+        unset($lhp);
+        
+        // Lọc theo môn học
+        if ($maMon) {
+            $danhSachLHP = array_filter($danhSachLHP, function($lhp) use ($maMon) {
+                return $lhp['MaMonHoc'] === $maMon;
+            });
+        }
+        
+        // Lọc theo từ khóa
+        if ($tuKhoa) {
+            $danhSachLHP = array_filter($danhSachLHP, function($lhp) use ($tuKhoa) {
+                $search = mb_strtolower($tuKhoa, 'UTF-8');
+                $tenMon = mb_strtolower($lhp['TenMonHoc'] ?? '', 'UTF-8');
+                $maLHP = mb_strtolower($lhp['MaLopHocPhan'] ?? '', 'UTF-8');
+                $tenGV = mb_strtolower($lhp['TenGiangVien'] ?? '', 'UTF-8');
+                return strpos($tenMon, $search) !== false 
+                    || strpos($maLHP, $search) !== false
+                    || strpos($tenGV, $search) !== false;
+            });
+        }
+        
+        $pageTitle = 'Đăng ký học phần';
+        $breadcrumb = 'Sinh viên / Đăng ký học phần';
+        
+        require_once __DIR__ . '/../views/sinhvien/dangkylophoc.php';
+    }
+
+    /**
+     * Xử lý đăng ký học phần (AJAX)
+     */
+    public function dangKy() {
+        header('Content-Type: application/json');
+        
+        $sinhVien = $this->getSinhVienPortalData();
+        $maSV = $sinhVien['MaSinhVien'] ?? '';
+        
+        if (empty($maSV)) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng đăng nhập lại!']);
+            exit;
+        }
+        
+        $maLHP = $_POST['maLopHocPhan'] ?? '';
+        
+        if (empty($maLHP)) {
+            echo json_encode(['success' => false, 'message' => 'Thiếu mã lớp học phần!']);
+            exit;
+        }
+        
+        $hocKyModel = $this->model('HocKyModel');
+        $lhpModel = $this->model('LopHocPhanModel');
+        $dkhModel = $this->model('DangKyHocModel');
+        
+        // Lấy học kỳ hiện tại
+        $hocKyHienTai = $hocKyModel->getCurrentHocKy();
+        $maHKHienTai = $hocKyHienTai['MaHocKy'] ?? null;
+        
+        // Kiểm tra đã đăng ký chưa
+        if ($dkhModel->isRegistered($maSV, $maLHP)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn đã đăng ký lớp học phần này rồi!']);
+            exit;
+        }
+        
+        // Kiểm tra lớp học phần đã đủ sĩ số chưa
+        if ($dkhModel->isClassFull($maLHP)) {
+            echo json_encode(['success' => false, 'message' => 'Lớp học phần đã đủ sĩ số!']);
+            exit;
+        }
+        
+        // Kiểm tra trùng lịch
+        if ($dkhModel->hasScheduleConflict($maSV, $maLHP, $maHKHienTai)) {
+            echo json_encode(['success' => false, 'message' => 'Trùng lịch với môn đã đăng ký!']);
+            exit;
+        }
+        
+        // Thực hiện đăng ký
+        $dkhModel->MaSinhVien = $maSV;
+        $dkhModel->MaLopHocPhan = $maLHP;
+        $result = $dkhModel->create();
+        
+        if ($result === true) {
+            echo json_encode(['success' => true, 'message' => 'Đăng ký thành công!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => $result ?: 'Đăng ký thất bại!']);
+        }
+        exit;
+    }
+
+    /**
+     * Danh sách môn đã đăng ký
+     */
+    public function monDaDangKy() {
+        $sinhVien = $this->getSinhVienPortalData();
+        $maSV = $sinhVien['MaSinhVien'] ?? '';
+        
+        $hocKyModel = $this->model('HocKyModel');
+        $dkhModel = $this->model('DangKyHocModel');
+        $lhpModel = $this->model('LopHocPhanModel');
+        
+        // Lấy tất cả học kỳ (cho dropdown)
+        $hocKys = $hocKyModel->readAll();
+        
+        // Lọc theo học kỳ
+        $maHK = $_GET['maHocKy'] ?? null;
+        
+        // Lấy danh sách môn đã đăng ký
+        $dangKys = $dkhModel->getByMaSinhVienWithDetails($maSV);
+        
+        // Lọc theo học kỳ nếu có
+        if ($maHK) {
+            $dangKys = array_filter($dangKys, function($dk) use ($maHK) {
+                return $dk['MaHocKy'] === $maHK;
+            });
+        }
+        
+        // Lấy lịch học cho mỗi môn đã đăng ký
+        $lichHocByDK = [];
+        foreach ($dangKys as &$dk) {
+            $maLHP = $dk['MaLopHocPhan'] ?? '';
+            if ($maLHP) {
+                $schedule = $lhpModel->getSchedule($maLHP);
+                $lichHocByDK[$dk['MaDangKy']] = $schedule;
+            }
+            
+            // Chuyển đổi điểm chữ
+            $diem = $dk['DiemTongKet'] ?? null;
+            if ($diem !== null) {
+                $dk['DiemChu'] = $this->diemSoSangChu((float)$diem);
+            } else {
+                $dk['DiemChu'] = '';
+            }
+        }
+        unset($dk);
+        
+        $pageTitle = 'Môn đã đăng ký';
+        $breadcrumb = 'Sinh viên / Môn đã đăng ký';
+        
+        require_once __DIR__ . '/../views/sinhvien/mondadangky.php';
+    }
+
+    /**
+     * Xử lý hủy đăng ký học phần (AJAX)
+     */
+    public function huyDangKy() {
+        header('Content-Type: application/json');
+        
+        $sinhVien = $this->getSinhVienPortalData();
+        $maSV = $sinhVien['MaSinhVien'] ?? '';
+        
+        if (empty($maSV)) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng đăng nhập lại!']);
+            exit;
+        }
+        
+        $maDangKy = $_POST['maDangKy'] ?? '';
+        
+        if (empty($maDangKy)) {
+            echo json_encode(['success' => false, 'message' => 'Thiếu mã đăng ký!']);
+            exit;
+        }
+        
+        $dkhModel = $this->model('DangKyHocModel');
+        
+        // Lấy thông tin đăng ký
+        $dangKy = null;
+        $allDK = $dkhModel->getByMaSinhVienWithDetails($maSV);
+        foreach ($allDK as $dk) {
+            if ($dk['MaDangKy'] == $maDangKy) {
+                $dangKy = $dk;
+                break;
+            }
+        }
+        
+        if (!$dangKy) {
+            echo json_encode(['success' => false, 'message' => 'Không tìm thấy đăng ký!']);
+            exit;
+        }
+        
+        // Kiểm tra nếu đã có điểm thì không cho hủy
+        if (isset($dangKy['DiemTongKet']) && $dangKy['DiemTongKet'] !== null) {
+            echo json_encode(['success' => false, 'message' => 'Không thể hủy đăng ký vì đã có điểm!']);
+            exit;
+        }
+        
+        // Thực hiện hủy đăng ký
+        $dkhModel->MaDangKy = $maDangKy;
+        $result = $dkhModel->delete();
+        
+        if ($result === true) {
+            echo json_encode(['success' => true, 'message' => 'Hủy đăng ký thành công!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => $result ?: 'Hủy đăng ký thất bại!']);
+        }
+        exit;
+    }
+
+    /**
+     * Xem điểm danh - theo dõi việc tham gia học
+     */
+    public function xemDiemDanh() {
+        $sinhVien = $this->getSinhVienPortalData();
+        $maSV = $sinhVien['MaSinhVien'] ?? '';
+        
+        $hocKyModel = $this->model('HocKyModel');
+        $ddModel = $this->model('DiemDanhModel');
+        
+        // Lấy tất cả học kỳ (cho dropdown)
+        $hocKys = $hocKyModel->readAll();
+        
+        // Lọc theo học kỳ
+        $maHK = $_GET['maHocKy'] ?? null;
+        
+        // Lấy tổng hợp điểm danh
+        $diemDanhList = $ddModel->getTongHopDiemDanhBySinhVien($maSV, $maHK);
+        
+        $pageTitle = 'Xem điểm danh';
+        $breadcrumb = 'Sinh viên / Xem điểm danh';
+        
+        require_once __DIR__ . '/../views/sinhvien/xemdiemdanhsinhvien.php';
+    }
 }

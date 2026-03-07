@@ -31,8 +31,8 @@ $thuLabels = [2 => 'Thứ 2', 3 => 'Thứ 3', 4 => 'Thứ 4', 5 => 'Thứ 5', 6 
             <div class="nav-section-title">Tổng quan</div>
             <a href="<?= $baseUrl ?>/GiangVien/dashboard" class="nav-item"><div class="nav-item__icon">🏠</div><div>Bảng điều khiển</div></a>
             <div class="nav-section-title">Giảng dạy</div>
-            <a href="<?= $baseUrl ?>/GiangVien/dashboard" class="nav-item"><div class="nav-item__icon">📚</div><div>Lớp & môn được dạy</div></a>
-            <div class="nav-section-title">Khác</div>
+            <a href="<?= $baseUrl ?>/GiangVien/indexLopHocPhan" class="nav-item"><div class="nav-item__icon">📚</div><div>Lớp & môn được dạy</div></a>
+            <div class="nav-section-title">Chức năng</div>
             <a href="<?= $baseUrl ?>/GiangVien/nhapDiem" class="nav-item"><div class="nav-item__icon">📝</div><div>Nhập điểm</div></a>
             <a href="<?= $baseUrl ?>/GiangVien/traCuuDiem" class="nav-item"><div class="nav-item__icon">🔍</div><div>Tra cứu điểm</div></a>
             <a href="<?= $baseUrl ?>/GiangVien/guiThongBao" class="nav-item"><div class="nav-item__icon">📧</div><div>Gửi thông báo</div></a>

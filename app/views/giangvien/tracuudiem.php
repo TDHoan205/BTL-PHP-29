@@ -34,8 +34,8 @@ $baseUrl = defined('URLROOT') ? URLROOT : '';
             <div class="nav-section-title">Tổng quan</div>
             <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-item"><div class="nav-item__icon">🏠</div><div>Bảng điều khiển</div></a>
             <div class="nav-section-title">Giảng dạy</div>
-            <a href="<?php echo $baseUrl; ?>/GiangVien/dashboard" class="nav-item"><div class="nav-item__icon">📚</div><div>Lớp & môn được dạy</div></a>
-            <div class="nav-section-title">Khác</div>
+            <a href="<?php echo $baseUrl; ?>/GiangVien/indexLopHocPhan" class="nav-item"><div class="nav-item__icon">📚</div><div>Lớp & môn được dạy</div></a>
+            <div class="nav-section-title">Chức năng</div>
             <a href="<?php echo $baseUrl; ?>/GiangVien/nhapDiem" class="nav-item"><div class="nav-item__icon">📝</div><div>Nhập điểm</div></a>
             <a href="<?php echo $baseUrl; ?>/GiangVien/traCuuDiem" class="nav-item nav-item--active"><div class="nav-item__icon">🔍</div><div>Tra cứu điểm</div></a>
             <a href="<?php echo $baseUrl; ?>/GiangVien/guiThongBao" class="nav-item"><div class="nav-item__icon">📧</div><div>Gửi thông báo</div></a>

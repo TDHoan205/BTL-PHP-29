@@ -188,4 +188,87 @@ class LopHocPhanModel extends Model {
             return $prefix . '001';
         }
     }
+
+    /**
+     * Lấy danh sách lớp học phần đang mở trong học kỳ hiện tại (cho sinh viên đăng ký)
+     * Bao gồm: Mã LHP, Môn học, Giảng viên, Lịch học, Sĩ số còn lại/Tối đa
+     */
+    public function getAvailableForRegistration($maHocKy = null) {
+        try {
+            $sql = "SELECT lhp.MaLopHocPhan, lhp.MaMonHoc, lhp.MaHocKy, lhp.PhongHoc, lhp.SoLuongToiDa, lhp.TrangThai,
+                    mh.TenMonHoc, mh.SoTinChi,
+                    gv.MaGiangVien, gv.HoTen as TenGiangVien,
+                    hk.TenHocKy, hk.NamHoc,
+                    (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSoDangKy
+                    FROM {$this->table_name} lhp
+                    LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                    LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
+                    LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                    WHERE lhp.TrangThai = 1";
+            
+            if ($maHocKy) {
+                $sql .= " AND lhp.MaHocKy = :MaHocKy";
+            }
+            
+            $sql .= " ORDER BY mh.TenMonHoc, lhp.MaLopHocPhan";
+            
+            $stmt = $this->conn->prepare($sql);
+            if ($maHocKy) {
+                $stmt->bindParam(":MaHocKy", $maHocKy);
+            }
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getAvailableForRegistration: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Lấy lịch học của một lớp học phần
+     */
+    public function getSchedule($maLopHocPhan) {
+        try {
+            $query = "SELECT tkb.*, lhp.PhongHoc as PhongMacDinh
+                      FROM THOI_KHOA_BIEU tkb
+                      LEFT JOIN LOP_HOC_PHAN lhp ON tkb.MaLopHocPhan = lhp.MaLopHocPhan
+                      WHERE tkb.MaLopHocPhan = :MaLopHocPhan
+                      ORDER BY tkb.Thu, tkb.TietBatDau";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getSchedule: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Lấy danh sách các môn học từ lớp học phần đang mở (cho dropdown lọc)
+     */
+    public function getMonHocForFilter($maHocKy = null) {
+        try {
+            $sql = "SELECT DISTINCT mh.MaMonHoc, mh.TenMonHoc
+                    FROM {$this->table_name} lhp
+                    LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                    WHERE lhp.TrangThai = 1";
+            
+            if ($maHocKy) {
+                $sql .= " AND lhp.MaHocKy = :MaHocKy";
+            }
+            
+            $sql .= " ORDER BY mh.TenMonHoc";
+            
+            $stmt = $this->conn->prepare($sql);
+            if ($maHocKy) {
+                $stmt->bindParam(":MaHocKy", $maHocKy);
+            }
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getMonHocForFilter: " . $e->getMessage());
+            return [];
+        }
+    }
 }

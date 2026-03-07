@@ -103,10 +103,12 @@ class DangKyHocModel extends Model {
                   dk.DiemTongKet, dk.DiemChu, dk.DiemSo, dk.KetQua,
                   lhp.MaMonHoc, lhp.MaHocKy,
                   mh.TenMonHoc, mh.SoTinChi,
+                  gv.HoTen as TenGV, gv.MaGiangVien,
                   hk.TenHocKy, hk.NamHoc
                   FROM {$this->table_name} dk
                   JOIN LOP_HOC_PHAN lhp ON dk.MaLopHocPhan = lhp.MaLopHocPhan
                   LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                  LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
                   LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
                   WHERE dk.MaSinhVien = :maSV
                   ORDER BY hk.NamHoc DESC, hk.MaHocKy, mh.TenMonHoc";
@@ -193,6 +195,109 @@ class DangKyHocModel extends Model {
             return true;
         } catch (PDOException $e) {
             return $this->handlePdoException($e);
+        }
+    }
+
+    /**
+     * Lấy lịch học của sinh viên đã đăng ký (để kiểm tra trùng lịch)
+     */
+    public function getRegisteredSchedule($maSinhVien, $maHocKy = null) {
+        try {
+            $sql = "SELECT tkb.*, lhp.MaLopHocPhan, lhp.MaMonHoc, mh.TenMonHoc
+                    FROM {$this->table_name} dk
+                    INNER JOIN LOP_HOC_PHAN lhp ON dk.MaLopHocPhan = lhp.MaLopHocPhan
+                    INNER JOIN THOI_KHOA_BIEU tkb ON lhp.MaLopHocPhan = tkb.MaLopHocPhan
+                    LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                    WHERE dk.MaSinhVien = :MaSinhVien";
+            
+            if ($maHocKy) {
+                $sql .= " AND lhp.MaHocKy = :MaHocKy";
+            }
+            
+            $sql .= " ORDER BY tkb.Thu, tkb.TietBatDau";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(":MaSinhVien", $maSinhVien);
+            if ($maHocKy) {
+                $stmt->bindParam(":MaHocKy", $maHocKy);
+            }
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getRegisteredSchedule: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Kiểm tra xem lớp học phần đã đủ sĩ số chưa
+     */
+    public function isClassFull($maLopHocPhan) {
+        try {
+            $query = "SELECT lhp.SoLuongToiDa, 
+                      (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSoDangKy
+                      FROM LOP_HOC_PHAN lhp
+                      WHERE lhp.MaLopHocPhan = :MaLopHocPhan";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaLopHocPhan", $maLopHocPhan);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                $toiDa = (int)$result['SoLuongToiDa'];
+                $dangKy = (int)$result['SiSoDangKy'];
+                return $dangKy >= $toiDa;
+            }
+            return false;
+        } catch (PDOException $e) {
+            error_log("Error in isClassFull: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Kiểm tra xem có trùng lịch với môn đã đăng ký không
+     * Trùng lịch khi: cùng thứ AND (tiết bắt đầu mới <= tiết kết thúc cũ AND tiết kết thúc mới >= tiết bắt đầu cũ)
+     */
+    public function hasScheduleConflict($maSinhVien, $maLopHocPhanMoi, $maHocKy = null) {
+        try {
+            // Lấy lịch của lớp học phần mới
+            $queryNew = "SELECT tkb.Thu, tkb.TietBatDau, tkb.TietKetThuc
+                         FROM THOI_KHOA_BIEU tkb
+                         WHERE tkb.MaLopHocPhan = :MaLopHocPhan";
+            $stmtNew = $this->conn->prepare($queryNew);
+            $stmtNew->bindParam(":MaLopHocPhan", $maLopHocPhanMoi);
+            $stmtNew->execute();
+            $newSchedule = $stmtNew->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($newSchedule)) {
+                return false;
+            }
+            
+            // Lấy lịch của các môn đã đăng ký
+            $registeredSchedules = $this->getRegisteredSchedule($maSinhVien, $maHocKy);
+            
+            // Kiểm tra trùng lịch
+            foreach ($newSchedule as $new) {
+                foreach ($registeredSchedules as $registered) {
+                    if ($new['Thu'] == $registered['Thu']) {
+                        $newStart = (int)$new['TietBatDau'];
+                        $newEnd = (int)$new['TietKetThuc'];
+                        $regStart = (int)$registered['TietBatDau'];
+                        $regEnd = (int)$registered['TietKetThuc'];
+                        
+                        // Check if time slots overlap
+                        if ($newStart <= $regEnd && $newEnd >= $regStart) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        } catch (PDOException $e) {
+            error_log("Error in hasScheduleConflict: " . $e->getMessage());
+            return false;
         }
     }
 }

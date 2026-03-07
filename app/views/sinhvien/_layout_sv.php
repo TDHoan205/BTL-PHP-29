@@ -41,6 +41,12 @@ $pageActive = $pageActive ?? 'dashboard';
         <li><a href="<?= $baseUrl ?>/SinhVien/lichHoc" class="<?= $pageActive === 'lichhoc' ? 'active' : '' ?>"><i class="fas fa-calendar-alt"></i> Thời khóa biểu</a></li>
         <li><a href="<?= $baseUrl ?>/SinhVien/monHoc" class="<?= $pageActive === 'monhoc' ? 'active' : '' ?>"><i class="fas fa-book"></i> Môn đang/chưa học</a></li>
     </ul>
+    <div class="sidebar-section">Đăng ký học phần</div>
+    <ul class="sidebar-menu">
+        <li><a href="<?= $baseUrl ?>/SinhVien/dangKyHoc" class="<?= $pageActive === 'dangkylophoc' ? 'active' : '' ?>"><i class="fas fa-plus-circle"></i> Đăng ký học phần</a></li>
+        <li><a href="<?= $baseUrl ?>/SinhVien/monDaDangKy" class="<?= $pageActive === 'mondadangky' ? 'active' : '' ?>"><i class="fas fa-list-check"></i> Môn đã đăng ký</a></li>
+        <li><a href="<?= $baseUrl ?>/SinhVien/xemDiemDanh" class="<?= $pageActive === 'xemdiemdanh' ? 'active' : '' ?>"><i class="fas fa-clipboard-check"></i> Xem điểm danh</a></li>
+    </ul>
     <div class="sidebar-section">Hệ thống</div>
     <ul class="sidebar-menu">
         <li><a href="<?= $baseUrl ?>/Auth/logout" class="sidebar-logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>

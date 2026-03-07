@@ -16,9 +16,102 @@ class GiangVienController extends Controller {
 
     /**
      * Dashboard cổng giảng viên (sau khi đăng nhập vai trò Giảng viên)
-     * Hiển thị view app/views/giangvien/dashboardgiangvien.php
+     * Hiển thị view app/views/giangvien/dashboard.php - trang tổng quan
      */
     public function dashboard() {
+        if (empty($_SESSION['logged_in']) || empty($_SESSION['user_id'])) {
+            $baseUrl = defined('URLROOT') ? rtrim(URLROOT, '/') : '';
+            header('Location: ' . $baseUrl . '/Auth/index');
+            exit;
+        }
+        $userModel = $this->model('UserModel');
+        $user = $userModel->getById($_SESSION['user_id']);
+        if (!$user) {
+            session_destroy();
+            header('Location: ' . (defined('URLROOT') ? rtrim(URLROOT, '/') : '') . '/Auth/index');
+            exit;
+        }
+        $tenDangNhap = trim($user['TenDangNhap'] ?? '');
+        $giangVien = $this->gvModel->getById($tenDangNhap);
+        if (!$giangVien) {
+            $allGV = $this->gvModel->readAll();
+            foreach ($allGV as $g) {
+                if (strcasecmp($g['MaGiangVien'] ?? '', $tenDangNhap) === 0) {
+                    $giangVien = $g;
+                    break;
+                }
+            }
+        }
+        if (!$giangVien) {
+            $giangVien = ['MaGiangVien' => $tenDangNhap, 'HoTen' => $user['HoTen'] ?? 'Giảng viên'];
+        }
+
+        $maGV = $giangVien['MaGiangVien'] ?? $tenDangNhap;
+        $lhpModel = $this->model('LopHocPhanModel');
+        $dangKyModel = $this->model('DangKyHocModel');
+        $diemModel = $this->model('ChiTietDiemModel');
+        $ddModel = $this->model('DiemDanhModel');
+
+        $lopHocPhanList = $lhpModel->getByMaGiangVien($maGV);
+
+        // Calculate statistics for dashboard
+        $tongLop = count($lopHocPhanList);
+        $tongSinhVien = 0;
+        $tongMon = [];
+        $diemDaNhap = 0;
+        $buoiDaDiemDanh = 0;
+        $tongDiem = 0;
+        $soLopCoDiem = 0;
+
+        foreach ($lopHocPhanList as $lop) {
+            $maLopHP = $lop['MaLopHocPhan'] ?? '';
+            $siSo = (int)($lop['SiSo'] ?? 0);
+            $tongSinhVien += $siSo;
+
+            // Count unique subjects
+            $maMon = $lop['MaMonHoc'] ?? '';
+            if ($maMon && !in_array($maMon, $tongMon)) {
+                $tongMon[] = $maMon;
+            }
+
+            // Count grades entered
+            if ($maLopHP) {
+                $dangKys = $dangKyModel->getByLopHocPhan($maLopHP);
+                foreach ($dangKys as $dk) {
+                    $diems = $diemModel->getByDangKy($dk['MaDangKy'] ?? 0);
+                    if (!empty($diems)) {
+                        $diemDaNhap++;
+                        // Calculate average
+                        $diemTB = $this->tinhDiemTrungBinh($diems);
+                        if ($diemTB !== null) {
+                            $tongDiem += $diemTB;
+                            $soLopCoDiem++;
+                        }
+                    }
+                }
+
+                // Count attendance sessions
+                $bangDiemDanh = $ddModel->getBangDiemDanhByLop($maLopHP);
+                $buoiDaDiemDanh = max($buoiDaDiemDanh, count($bangDiemDanh) > 0 ? count($bangDiemDanh[0]['Buoi'] ?? []) : 0);
+            }
+        }
+
+        $thongKe = [
+            'tongLop' => $tongLop,
+            'tongSinhVien' => $tongSinhVien,
+            'tongMon' => count($tongMon),
+            'diemDaNhap' => $diemDaNhap,
+            'buoiDaDiemDanh' => $buoiDaDiemDanh,
+            'diemTrungBinh' => $soLopCoDiem > 0 ? $tongDiem / $soLopCoDiem : 0
+        ];
+
+        require_once __DIR__ . '/../views/giangvien/dashboard.php';
+    }
+
+    /**
+     * Danh sách lớp học phần - trang Lớp & môn được dạy
+     */
+    public function indexLopHocPhan() {
         if (empty($_SESSION['logged_in']) || empty($_SESSION['user_id'])) {
             $baseUrl = defined('URLROOT') ? rtrim(URLROOT, '/') : '';
             header('Location: ' . $baseUrl . '/Auth/index');
@@ -59,13 +152,6 @@ class GiangVienController extends Controller {
         $lopHocPhanList = $lhpModel->getByMaGiangVien($maGV);
         $sinhVienLopHocPhan = [];
         require_once __DIR__ . '/../views/giangvien/dashboardgiangvien.php';
-    }
-
-    /**
-     * Alias cho dashboard - dùng để match URL route /GiangVien/dashboardgiangvien
-     */
-    public function dashboardgiangvien() {
-        $this->dashboard();
     }
 
     /**
@@ -262,6 +348,7 @@ class GiangVienController extends Controller {
     public function diemDanh() {
         list($giangVien, $maGV, $lopHocPhanList) = $this->getGiangVienPortalData();
         $maLopHocPhan = $_GET['maLopHocPhan'] ?? null;
+        $buoiSelected = isset($_GET['buoi']) ? (int)$_GET['buoi'] : 1;
         $lopHocPhanSelected = null;
         $bangDiemDanh = [];
         if ($maLopHocPhan) {
@@ -295,27 +382,32 @@ class GiangVienController extends Controller {
         list($giangVien, $maGV, $lopHocPhanList) = $this->getGiangVienPortalData();
         $maLop = $this->getPost('MaLopHocPhan');
         $buoiThu = (int) $this->getPost('BuoiThu');
-        $danhSach = $_POST['coMat'] ?? [];
+        // Lấy trạng thái điểm danh: 1=Có mặt, 2=Muộn, 3=Nghỉ có lý do, 4=Nghỉ không lý do
+        $danhSach = $_POST['trangThai'] ?? [];
+        $baseUrl = defined('URLROOT') ? rtrim(URLROOT, '/') : '';
+        
         if (empty($maLop) || $buoiThu < 1) {
-            header('Location: index.php?url=GiangVien/diemDanh&maLopHocPhan=' . urlencode($maLop ?? ''));
+            header('Location: ' . $baseUrl . '/GiangVien/diemDanh?maLopHocPhan=' . urlencode($maLop ?? ''));
             exit;
         }
         $lhpModel = $this->model('LopHocPhanModel');
         $lop = $lhpModel->getById($maLop);
         if (!$lop || strcasecmp($lop['MaGiangVien'] ?? '', $maGV) !== 0) {
-            header('Location: index.php?url=GiangVien/diemDanh');
+            header('Location: ' . $baseUrl . '/GiangVien/diemDanh');
             exit;
         }
         // Kiểm tra giới hạn buổi: SoTinChi * 5 + 3
         $soTinChi = (int)($lop['SoTinChi'] ?? 1);
         $soBuoiToiDa = $soTinChi * 5 + 3;
         if ($buoiThu > $soBuoiToiDa) {
-            header('Location: index.php?url=GiangVien/diemDanh&maLopHocPhan=' . urlencode($maLop) . '&error=limit');
+            header('Location: ' . $baseUrl . '/GiangVien/diemDanh?maLopHocPhan=' . urlencode($maLop) . '&error=limit');
             exit;
         }
         $ddModel = $this->model('DiemDanhModel');
         $ddModel->saveDiemDanhBuoi($maLop, $buoiThu, $danhSach, $maGV);
-        header('Location: index.php?url=GiangVien/diemDanh&maLopHocPhan=' . urlencode($maLop) . '&success=1');
+        
+        // Giữ nguyên buổi đang điểm danh sau khi lưu
+        header('Location: ' . $baseUrl . '/GiangVien/diemDanh?maLopHocPhan=' . urlencode($maLop) . '&buoi=' . $buoiThu . '&success=1');
         exit;
     }
 
@@ -323,16 +415,17 @@ class GiangVienController extends Controller {
      * Đồng bộ điểm chuyên cần từ điểm danh vào CHI_TIET_DIEM
      */
     public function dongBoDiemCC() {
+        $baseUrl = defined('URLROOT') ? rtrim(URLROOT, '/') : '';
         list($giangVien, $maGV, $lopHocPhanList) = $this->getGiangVienPortalData();
         $maLop = $_GET['maLopHocPhan'] ?? '';
         if (empty($maLop)) {
-            header('Location: index.php?url=GiangVien/diemDanh');
+            header('Location: ' . $baseUrl . '/GiangVien/diemDanh');
             exit;
         }
         $lhpModel = $this->model('LopHocPhanModel');
         $lop = $lhpModel->getById($maLop);
         if (!$lop || strcasecmp($lop['MaGiangVien'] ?? '', $maGV) !== 0) {
-            header('Location: index.php?url=GiangVien/diemDanh');
+            header('Location: ' . $baseUrl . '/GiangVien/diemDanh');
             exit;
         }
         $ddModel = $this->model('DiemDanhModel');
@@ -348,7 +441,7 @@ class GiangVienController extends Controller {
                 $ctdModel->upsert();
             }
         }
-        header('Location: index.php?url=GiangVien/diemDanh&maLopHocPhan=' . urlencode($maLop) . '&sync=1');
+        header('Location: ' . $baseUrl . '/GiangVien/diemDanh?maLopHocPhan=' . urlencode($maLop) . '&sync=1');
         exit;
     }
 
