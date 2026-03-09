@@ -35,6 +35,22 @@ class UserModel extends Model {
             return null;
         }
     }
+    
+    /**
+     * Lấy thông tin user bằng tên đăng nhập trực tiếp từ DB
+     */
+    public function getByUsernameDirect($username) {
+        try {
+            $query = "SELECT * FROM {$this->table_name} WHERE TenDangNhap = :TenDangNhap LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":TenDangNhap", $username);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getByUsernameDirect: " . $e->getMessage());
+            return null;
+        }
+    }
 
     /**
      * Kiểm tra tên đăng nhập đã tồn tại chưa
@@ -144,10 +160,47 @@ class UserModel extends Model {
     }
 
     /**
+     * Cập nhật người dùng (không đổi mật khẩu)
+     */
+    public function updateWithoutPassword() {
+        try {
+            // TrangThai: 1 = Hoạt động, 0 = Không hoạt động
+            $trangThaiValue = ($this->TrangThai == 1 || $this->TrangThai === '1') ? 1 : 0;
+            
+            $query = "UPDATE {$this->table_name} 
+                      SET TenDangNhap=:TenDangNhap, HoTen=:HoTen, 
+                          Email=:Email, SoDienThoai=:SoDienThoai, VaiTro=:VaiTro, 
+                          TrangThai=:TrangThai, Avatar=:Avatar, NgayCapNhat=:NgayCapNhat 
+                      WHERE MaUser=:MaUser";
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindValue(":MaUser", (int)$this->MaUser);
+            $stmt->bindValue(":TenDangNhap", $this->sanitize($this->TenDangNhap));
+            $stmt->bindValue(":HoTen", $this->sanitize($this->HoTen));
+            $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
+            $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
+            $stmt->bindValue(":VaiTro", $this->sanitize($this->VaiTro) ?: 'user');
+            $stmt->bindValue(":TrangThai", $trangThaiValue);
+            $stmt->bindValue(":Avatar", $this->sanitize($this->Avatar) ?: null);
+            $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
+
+            if ($stmt->execute()) {
+                return true;
+            }
+            return "Không thể cập nhật người dùng. Vui lòng thử lại!";
+        } catch (PDOException $e) {
+            return $this->handlePdoException($e, 'UserModel::updateWithoutPassword');
+        }
+    }
+
+    /**
      * Cập nhật người dùng
      */
     public function update() {
         try {
+            // TrangThai: 1 = Hoạt động, 0 = Không hoạt động
+            $trangThaiValue = ($this->TrangThai == 1 || $this->TrangThai === '1') ? 1 : 0;
+            
             // Kiểm tra nếu có cập nhật mật khẩu
             if (!empty($this->MatKhau)) {
                 $query = "UPDATE {$this->table_name} 
@@ -170,7 +223,7 @@ class UserModel extends Model {
             $stmt->bindValue(":Email", $this->sanitize($this->Email) ?: null);
             $stmt->bindValue(":SoDienThoai", $this->sanitize($this->SoDienThoai) ?: null);
             $stmt->bindValue(":VaiTro", $this->sanitize($this->VaiTro) ?: 'user');
-            $stmt->bindValue(":TrangThai", $this->sanitize($this->TrangThai) ?: 'Hoạt động');
+            $stmt->bindValue(":TrangThai", $trangThaiValue);
             $stmt->bindValue(":Avatar", $this->sanitize($this->Avatar) ?: null);
             $stmt->bindValue(":NgayCapNhat", date('Y-m-d H:i:s'));
 
@@ -215,6 +268,12 @@ class UserModel extends Model {
     public function authenticate($username, $password) {
         $user = $this->getByUsername($username);
         if (!$user) {
+            return false;
+        }
+
+        // Kiểm tra trạng thái tài khoản - nếu bị vô hiệu hóa thì không cho đăng nhập
+        $trangThai = $user['TrangThai'] ?? 1;
+        if ($trangThai == 0 || $trangThai === '0' || $trangThai === 'Không hoạt động') {
             return false;
         }
 

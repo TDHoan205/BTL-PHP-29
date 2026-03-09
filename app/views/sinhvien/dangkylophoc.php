@@ -17,6 +17,11 @@ require_once __DIR__ . '/_layout_sv.php';
 ?>
 <div class="content-header">
     <div class="content-header__title">Đăng ký học phần</div>
+    <?php if (isset($tenKhoa)): ?>
+    <div class="content-header__subtitle" style="font-size: 14px; color: #6c757d; margin-top: 4px;">
+        <i class="fas fa-building"></i> Khoa: <?= htmlspecialchars($tenKhoa) ?> - Chỉ hiển thị môn học thuộc khoa của bạn
+    </div>
+    <?php endif; ?>
 </div>
 
 <div class="card">

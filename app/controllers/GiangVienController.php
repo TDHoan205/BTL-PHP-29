@@ -545,6 +545,15 @@ class GiangVienController extends Controller {
             return;
         }
         $maDangKy = (int) $data['maDangKy'];
+        
+        // Kiểm tra trạng thái điểm - nếu đã khóa hoặc phê duyệt thì giảng viên không được sửa
+        $dangKyModel = $this->model('DangKyHocModel');
+        $trangThaiDiem = $dangKyModel->getTrangThaiDiem($maDangKy);
+        if ($trangThaiDiem >= 1) {
+            echo json_encode(['success' => false, 'message' => 'Điểm đã bị khóa. Liên hệ admin để chỉnh sửa!']);
+            return;
+        }
+        
         $diemData = $data['diem'] ?? [];
         if (!is_array($diemData)) {
             $diemData = [];

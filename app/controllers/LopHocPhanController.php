@@ -112,6 +112,7 @@ class LopHocPhanController extends Controller {
             'PhongHoc' => $this->getPost('PhongHoc'),
             'SoLuongToiDa' => $this->getPost('SoLuongToiDa'),
             'TrangThai' => $this->getPost('TrangThai'),
+            'ChoPhepDangKyKhacKhoa' => $this->getPost('ChoPhepDangKyKhacKhoa'),
         ];
 
         $errors = $this->validate($input, [
@@ -141,6 +142,7 @@ class LopHocPhanController extends Controller {
         $this->lhpModel->PhongHoc = $input['PhongHoc'] ?: null;
         $this->lhpModel->SoLuongToiDa = $input['SoLuongToiDa'] ? (int) $input['SoLuongToiDa'] : 60;
         $this->lhpModel->TrangThai = $input['TrangThai'] ?: 'Đang mở';
+        $this->lhpModel->ChoPhepDangKyKhacKhoa = isset($input['ChoPhepDangKyKhacKhoa']) ? 1 : 0;
 
         $result = $this->lhpModel->update();
         if ($result === true) {

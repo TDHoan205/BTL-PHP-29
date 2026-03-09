@@ -100,6 +100,62 @@ class Controller {
     }
 
     /**
+     * Kiểm tra tài khoản có đang hoạt động không
+     * Nếu tài khoản bị vô hiệu hóa thì tự động logout
+     */
+    protected function checkAccountStatus() {
+        if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+            return true; // Chưa đăng nhập, không cần kiểm tra
+        }
+        
+        if (!isset($_SESSION['user_id'])) {
+            return true;
+        }
+        
+        // Lấy thông tin user từ database để kiểm tra trạng thái
+        $userModel = $this->model('UserModel');
+        $user = $userModel->getById($_SESSION['user_id']);
+        
+        if (!$user) {
+            // User không tồn tại, logout
+            $this->forceLogout();
+            return false;
+        }
+        
+        $trangThai = $user['TrangThai'] ?? 1;
+        
+        // Nếu tài khoản bị vô hiệu hóa (TrangThai = 0)
+        if ($trangThai == 0 || $trangThai === '0') {
+            $this->forceLogout();
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Buộc logout và chuyển về trang đăng nhập
+     */
+    protected function forceLogout() {
+        // Xóa tất cả session
+        $_SESSION = [];
+        
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params['path'], $params['domain'],
+                $params['secure'], $params['httponly']
+            );
+        }
+        
+        session_destroy();
+        
+        // Chuyển về trang đăng nhập với thông báo
+        header("Location: index.php?url=Auth/index&error=account_disabled");
+        exit;
+    }
+
+    /**
      * Validate input data
      */
     protected function validate($data, $rules) {

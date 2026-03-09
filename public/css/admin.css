@@ -712,6 +712,24 @@ body {
     font-weight: 500;
 }
 
+.status-locked {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-approved {
+    background: #dcfce7;
+    color: #16a34a;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
 /* ===== Filter Bar ===== */
 .filter-bar {
     display: flex;

@@ -350,10 +350,16 @@
             <h2>Chào mừng đến UNISCORE!</h2>
             <p class="subtitle">Hệ thống quản lý điểm sinh viên chuyên nghiệp</p>
             
-            <?php if(isset($data['error'])): ?>
+            <?php 
+            $displayError = $data['error'] ?? '';
+            if (isset($_GET['error']) && $_GET['error'] === 'account_disabled') {
+                $displayError = 'Tài khoản không hoạt động. Vui lòng liên hệ admin hoặc cố vấn học tập để được hỗ trợ!';
+            }
+            if (!empty($displayError)): 
+            ?>
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle"></i>
-                <?= $data['error'] ?>
+                <?= htmlspecialchars($displayError) ?>
             </div>
             <?php endif; ?>
             

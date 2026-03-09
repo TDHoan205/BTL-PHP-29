@@ -575,7 +575,7 @@ class SinhVienController extends Controller {
             return;
         }
         
-        $this->redirect('SinhVien/index');
+        $this->redirect('SinhVien/index?deleted=1');
     }
 
     /**
@@ -590,6 +590,7 @@ class SinhVienController extends Controller {
 
     /**
      * Đăng ký học phần - Danh sách các lớp học phần đang mở
+     * Chỉ hiển thị các môn cùng khoa với sinh viên
      */
     public function dangKyHoc() {
         $sinhVien = $this->getSinhVienPortalData();
@@ -598,6 +599,18 @@ class SinhVienController extends Controller {
         $hocKyModel = $this->model('HocKyModel');
         $lhpModel = $this->model('LopHocPhanModel');
         $dkhModel = $this->model('DangKyHocModel');
+        $lopModel = $this->model('LopHanhChinhModel');
+        $nganhModel = $this->model('NganhModel');
+        
+        // Lấy thông tin khoa của sinh viên
+        $maLopHC = $sinhVien['MaLop'] ?? '';
+        $lopHC = $lopModel->getById($maLopHC);
+        $maNganhSV = $lopHC['MaNganh'] ?? null;
+        
+        // Lấy thông tin khoa từ ngành
+        $nganhSV = $nganhModel->getById($maNganhSV);
+        $maKhoaSV = $nganhSV['MaKhoa'] ?? null;
+        $tenKhoaSV = $nganhSV['TenNganh'] ?? '';
         
         // Lấy học kỳ hiện tại
         $hocKyHienTai = $hocKyModel->getCurrentHocKy();
@@ -612,10 +625,10 @@ class SinhVienController extends Controller {
         $tuKhoa = $_GET['tuKhoa'] ?? '';
         
         // Lấy danh sách lớp học phần đang mở
-        $danhSachLHP = $lhpModel->getAvailableForRegistration($maHK);
+        $danhSachLHP = $lhpModel->getAvailableForRegistration($maHK, $maKhoaSV);
         
-        // Lấy danh sách môn học cho dropdown lọc
-        $monHocList = $lhpModel->getMonHocForFilter($maHK);
+        // Lấy danh sách môn học cho dropdown lọc (chỉ môn cùng khoa)
+        $monHocList = $lhpModel->getMonHocForFilter($maHK, $maKhoaSV);
         
         // Lấy danh sách môn đã đăng ký của sinh viên
         $dangKys = $dkhModel->getByMaSinhVienWithDetails($maSV);
@@ -659,6 +672,9 @@ class SinhVienController extends Controller {
         
         $pageTitle = 'Đăng ký học phần';
         $breadcrumb = 'Sinh viên / Đăng ký học phần';
+        
+        // Truyền thông tin khoa cho view
+        $tenKhoa = $tenKhoaSV ?: 'Chưa xác định';
         
         require_once __DIR__ . '/../views/sinhvien/dangkylophoc.php';
     }

@@ -60,6 +60,13 @@ $giangviens = $data['giangviens'] ?? [];
                     <label class="form-check-label" for="trangThai">Đang mở đăng ký</label>
                 </div>
             </div>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input type="checkbox" name="ChoPhepDangKyKhacKhoa" value="1" class="form-check-input" id="choPhepKhacKhoa" <?= ($lhp['ChoPhepDangKyKhacKhoa'] ?? 0) ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="choPhepKhacKhoa">Cho phép sinh viên khác khoa đăng ký</label>
+                </div>
+                <small class="text-muted">Nếu checked, sinh viên các khoa khác có thể đăng ký môn này</small>
+            </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Lưu</button>
                 <a href="index.php?url=LopHocPhan/index" class="btn btn-secondary">Hủy</a>

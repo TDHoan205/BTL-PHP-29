@@ -61,6 +61,7 @@ class DiemController extends Controller {
             'passed' => $passed,
             'failed' => $failed,
             'pending' => $pending,
+            'trangThaiDiem' => $filterLop ? $this->dangKyModel->getTrangThaiDiemByLop($filterLop) : 0,
             'pageTitle' => 'Quản lý Điểm',
             'breadcrumb' => 'Điểm',
             'error' => '',
@@ -108,8 +109,14 @@ class DiemController extends Controller {
      */
     private function getBangDiemByLop($maLop) {
         $db = $this->getDb();
+        
+        // Kiểm tra xem cột TrangThaiDiem có tồn tại không
+        $hasTrangThaiDiem = $this->columnExists('DANG_KY_HOC', 'TrangThaiDiem');
+        
+        $trangThaiSelect = $hasTrangThaiDiem ? 'dk.TrangThaiDiem,' : '0 as TrangThaiDiem,';
+        
         $query = "SELECT dk.MaDangKy as ID, sv.MaSinhVien as MSSV, sv.HoTen, 
-                         lhp.MaLopHocPhan,
+                         lhp.MaLopHocPhan, {$trangThaiSelect}
                          MAX(CASE WHEN ld.TenLoaiDiem = 'Chuyên cần' OR ld.TenLoaiDiem = 'Quá trình' THEN ctd.SoDiem END) as DiemCC,
                          MAX(CASE WHEN ld.TenLoaiDiem = 'Giữa kỳ' THEN ctd.SoDiem END) as DiemGK,
                          MAX(CASE WHEN ld.TenLoaiDiem = 'Cuối kỳ' THEN ctd.SoDiem END) as DiemCK
@@ -119,7 +126,8 @@ class DiemController extends Controller {
                   LEFT JOIN CHI_TIET_DIEM ctd ON dk.MaDangKy = ctd.MaDangKy
                   LEFT JOIN LOAI_DIEM ld ON ctd.MaLoaiDiem = ld.MaLoaiDiem
                   WHERE dk.MaLopHocPhan = :maLop
-                  GROUP BY dk.MaDangKy, sv.MaSinhVien, sv.HoTen, lhp.MaLopHocPhan";
+                  GROUP BY dk.MaDangKy, sv.MaSinhVien, sv.HoTen, lhp.MaLopHocPhan
+                  ORDER BY sv.MaSinhVien";
         
         try {
             $stmt = $db->prepare($query);
@@ -127,7 +135,27 @@ class DiemController extends Controller {
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
+            error_log("Error getBangDiemByLop: " . $e->getMessage());
             return [];
+        }
+    }
+    
+    /**
+     * Kiểm tra xem cột có tồn tại trong bảng không
+     */
+    private function columnExists($table, $column) {
+        try {
+            $db = $this->getDb();
+            $query = "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS 
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':table', $table);
+            $stmt->bindParam(':column', $column);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return isset($result['count']) && $result['count'] > 0;
+        } catch (PDOException $e) {
+            return false;
         }
     }
 
@@ -142,6 +170,16 @@ class DiemController extends Controller {
         $diemData = $_POST['diem'] ?? [];
         $filterLop = $this->getPost('MaLopHocPhan');
         $errors = [];
+        
+        // Lấy trạng thái điểm hiện tại
+        $currentTrangThai = $filterLop ? $this->dangKyModel->getTrangThaiDiemByLop($filterLop) : 0;
+        
+        // Nếu điểm đã khóa hoặc phê duyệt thì KHÔNG AI được sửa (kể cả admin)
+        // Admin chỉ có thể mở khóa hoặc phê duyệt
+        if ($currentTrangThai >= 1) {
+            $this->redirect('Diem/index?lop=' . urlencode($filterLop) . '&error=locked');
+            return;
+        }
         
         foreach ($diemData as $maDangKy => $diem) {
             // Validate điểm
@@ -166,6 +204,7 @@ class DiemController extends Controller {
                 'passed' => 0,
                 'failed' => 0,
                 'pending' => 0,
+                'trangThaiDiem' => $currentTrangThai,
                 'pageTitle' => 'Quản lý Điểm',
                 'breadcrumb' => 'Điểm',
                 'error' => implode(' ', $errors),
@@ -180,15 +219,145 @@ class DiemController extends Controller {
             $this->updateDiemForDangKy($maDangKy, $diem);
         }
         
-        $this->redirect('Diem/index' . ($filterLop ? '?lop=' . urlencode($filterLop) : ''));
+        $this->redirect('Diem/index' . ($filterLop ? '?lop=' . urlencode($filterLop) . '&success=save' : ''));
     }
     
     /**
      * Cập nhật điểm cho một đăng ký học
      */
     private function updateDiemForDangKy($maDangKy, $diem) {
-        // Logic cập nhật điểm chi tiết
-        // TODO: Implement based on cấu trúc điểm cụ thể
+        try {
+            $db = $this->getDb();
+            
+            // Lấy MaLoaiDiem cho từng loại điểm
+            $loaiDiem = [
+                'qt' => $this->getMaLoaiDiemByTen('Chuyên cần'),
+                'gk' => $this->getMaLoaiDiemByTen('Giữa kỳ'),
+                'ck' => $this->getMaLoaiDiemByTen('Cuối kỳ')
+            ];
+            
+            // Cập nhật từng loại điểm
+            foreach (['qt', 'gk', 'ck'] as $loai) {
+                $maLoai = $loaiDiem[$loai] ?? null;
+                if ($maLoai && isset($diem[$loai]) && $diem[$loai] !== '') {
+                    $soDiem = (float) $diem[$loai];
+                    
+                    // Kiểm tra xem đã có điểm này chưa
+                    $checkQuery = "SELECT MaChiTiet FROM CHI_TIET_DIEM WHERE MaDangKy = :maDangKy AND MaLoaiDiem = :maLoai LIMIT 1";
+                    $checkStmt = $db->prepare($checkQuery);
+                    $checkStmt->bindParam(':maDangKy', $maDangKy);
+                    $checkStmt->bindParam(':maLoai', $maLoai);
+                    $checkStmt->execute();
+                    $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($existing) {
+                        // Cập nhật điểm hiện có
+                        $updateQuery = "UPDATE CHI_TIET_DIEM SET SoDiem = :soDiem WHERE MaDangKy = :maDangKy AND MaLoaiDiem = :maLoai";
+                        $stmt = $db->prepare($updateQuery);
+                        $stmt->bindParam(':soDiem', $soDiem);
+                        $stmt->bindParam(':maDangKy', $maDangKy);
+                        $stmt->bindParam(':maLoai', $maLoai);
+                        $stmt->execute();
+                    } else {
+                        // Thêm mới điểm
+                        $insertQuery = "INSERT INTO CHI_TIET_DIEM (MaDangKy, MaLoaiDiem, SoDiem, NgayNhap) VALUES (:maDangKy, :maLoai, :soDiem, NOW())";
+                        $stmt = $db->prepare($insertQuery);
+                        $stmt->bindParam(':maDangKy', $maDangKy);
+                        $stmt->bindParam(':maLoai', $maLoai);
+                        $stmt->bindParam(':soDiem', $soDiem);
+                        $stmt->execute();
+                    }
+                }
+            }
+            
+            // Cập nhật điểm tổng kết vào DANG_KY_HOC
+            $this->updateDiemTongKet($maDangKy);
+            
+        } catch (PDOException $e) {
+            error_log("Error updating diem: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Lấy mã loại điểm theo tên
+     */
+    private function getMaLoaiDiemByTen($tenLoai) {
+        try {
+            $db = $this->getDb();
+            $query = "SELECT MaLoaiDiem FROM LOAI_DIEM WHERE TenLoaiDiem = :tenLoai LIMIT 1";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':tenLoai', $tenLoai);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? $result['MaLoaiDiem'] : null;
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+    
+    /**
+     * Cập nhật điểm tổng kết vào bảng DANG_KY_HOC
+     */
+    private function updateDiemTongKet($maDangKy) {
+        try {
+            $db = $this->getDb();
+            
+            // Lấy điểm chi tiết
+            $query = "SELECT ctd.SoDiem, ld.TenLoaiDiem 
+                      FROM CHI_TIET_DIEM ctd 
+                      JOIN LOAI_DIEM ld ON ctd.MaLoaiDiem = ld.MaLoaiDiem 
+                      WHERE ctd.MaDangKy = :maDangKy";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':maDangKy', $maDangKy);
+            $stmt->execute();
+            $diems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $diemCC = null;
+            $diemGK = null;
+            $diemCK = null;
+            
+            foreach ($diems as $d) {
+                $tenLoai = $d['TenLoaiDiem'] ?? '';
+                if ($tenLoai === 'Chuyên cần' || $tenLoai === 'Quá trình') {
+                    $diemCC = (float) $d['SoDiem'];
+                } elseif ($tenLoai === 'Giữa kỳ') {
+                    $diemGK = (float) $d['SoDiem'];
+                } elseif ($tenLoai === 'Cuối kỳ') {
+                    $diemCK = (float) $d['SoDiem'];
+                }
+            }
+            
+            // Tính điểm TB
+            $diemTB = null;
+            if ($diemCC !== null || $diemGK !== null || $diemCK !== null) {
+                $cc = $diemCC ?? 0;
+                $gk = $diemGK ?? 0;
+                $ck = $diemCK ?? 0;
+                $diemTB = round($cc * 0.1 + $gk * 0.3 + $ck * 0.6, 2);
+            }
+            
+            // Chuyển điểm số sang điểm chữ
+            $diemChu = $this->diemSoSangChu($diemTB);
+            
+            // Xác định kết quả
+            $ketQua = null;
+            if ($diemTB !== null) {
+                $ketQua = $diemTB >= 4.0 ? 'Đạt' : 'Không đạt';
+            }
+            
+            // Cập nhật vào DANG_KY_HOC
+            $updateQuery = "UPDATE DANG_KY_HOC SET DiemTongKet = :diemTB, DiemChu = :diemChu, DiemSo = :diemSo, KetQua = :ketQua WHERE MaDangKy = :maDangKy";
+            $updateStmt = $db->prepare($updateQuery);
+            $updateStmt->bindParam(':diemTB', $diemTB);
+            $updateStmt->bindParam(':diemChu', $diemChu);
+            $updateStmt->bindParam(':diemSo', $diemTB);
+            $updateStmt->bindParam(':ketQua', $ketQua);
+            $updateStmt->bindParam(':maDangKy', $maDangKy);
+            $updateStmt->execute();
+            
+        } catch (PDOException $e) {
+            error_log("Error updating diem tong ket: " . $e->getMessage());
+        }
     }
     
     /**
@@ -204,7 +373,7 @@ class DiemController extends Controller {
         if (empty($maLop)) {
             $data = [
                 'bangdiem' => [],
-                'lophocphans' => $this->lopHPModel->readAll(),
+                'lophocphans' => $this->lopHPModel->readAllWithDetails(),
                 'hockys' => $this->hocKyModel->readAll(),
                 'filterLop' => null,
                 'totalSV' => 0,
@@ -220,9 +389,143 @@ class DiemController extends Controller {
             return;
         }
         
-        // TODO: Implement logic phê duyệt điểm
+        // Lấy thông tin người dùng hiện tại
+        $nguoiDung = $_SESSION['user'] ?? null;
+        $nguoiPheDuyet = $nguoiDung['TenDangNhap'] ?? 'admin';
         
-        $this->redirect('Diem/index?lop=' . urlencode($maLop));
+        // Phê duyệt điểm
+        $result = $this->dangKyModel->pheDuyetDiem($maLop, $nguoiPheDuyet);
+        
+        if ($result) {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&success=2');
+        } else {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&error=2');
+        }
+    }
+
+    /**
+     * Khóa điểm
+     */
+    public function lock() {
+        if (!$this->isPost()) {
+            $this->redirect('Diem/index');
+        }
+        
+        $maLop = $this->getPost('MaLopHocPhan');
+        
+        if (empty($maLop)) {
+            $this->redirect('Diem/index');
+            return;
+        }
+        
+        // Lấy thông tin người dùng hiện tại
+        $nguoiDung = $_SESSION['user'] ?? null;
+        $nguoiKhoa = $nguoiDung['TenDangNhap'] ?? 'admin';
+        
+        // Khóa điểm
+        $result = $this->dangKyModel->khoaDiem($maLop, $nguoiKhoa);
+        
+        if ($result) {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&success=1');
+        } else {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&error=1');
+        }
+    }
+
+    /**
+     * Mở khóa điểm (Admin only)
+     */
+    public function unlock() {
+        if (!$this->isPost()) {
+            $this->redirect('Diem/index');
+        }
+        
+        $maLop = $this->getPost('MaLopHocPhan');
+        
+        if (empty($maLop)) {
+            $this->redirect('Diem/index');
+            return;
+        }
+        
+        // Chỉ admin mới có quyền mở khóa
+        $isAdmin = isset($_SESSION['user_role']) && (strtolower($_SESSION['user_role']) === 'admin' || $_SESSION['user_role'] === 'Admin');
+        if (!$isAdmin) {
+            $this->redirect('Diem/index?error=unauthorized');
+            return;
+        }
+        
+        // Mở khóa điểm
+        $result = $this->dangKyModel->moKhoaDiem($maLop);
+        
+        if ($result) {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&success=3');
+        } else {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&error=3');
+        }
+    }
+
+    /**
+     * Hủy phê duyệt điểm (Admin only)
+     */
+    public function unapprove() {
+        if (!$this->isPost()) {
+            $this->redirect('Diem/index');
+        }
+        
+        $maLop = $this->getPost('MaLopHocPhan');
+        
+        if (empty($maLop)) {
+            $this->redirect('Diem/index');
+            return;
+        }
+        
+        // Chỉ admin mới có quyền hủy phê duyệt
+        $isAdmin = isset($_SESSION['user_role']) && (strtolower($_SESSION['user_role']) === 'admin' || $_SESSION['user_role'] === 'Admin');
+        if (!$isAdmin) {
+            $this->redirect('Diem/index?error=unauthorized');
+            return;
+        }
+        
+        // Hủy phê duyệt điểm
+        $result = $this->dangKyModel->huyPheDuyetDiem($maLop);
+        
+        if ($result) {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&success=4');
+        } else {
+            $this->redirect('Diem/index?lop=' . urlencode($maLop) . '&error=4');
+        }
+    }
+
+    /**
+     * API: Kiểm tra trạng thái điểm
+     */
+    public function getTrangThaiDiem() {
+        header('Content-Type: application/json');
+        
+        $maDangKy = isset($_GET['maDangKy']) ? (int)$_GET['maDangKy'] : 0;
+        
+        if (!$maDangKy) {
+            echo json_encode(['success' => false, 'message' => 'Thiếu mã đăng ký']);
+            exit;
+        }
+        
+        $trangThai = $this->dangKyModel->getTrangThaiDiem($maDangKy);
+        
+        echo json_encode([
+            'success' => true,
+            'trangThai' => $trangThai,
+            'message' => $this->getTrangThaiDiemMessage($trangThai)
+        ]);
+        exit;
+    }
+
+    private function getTrangThaiDiemMessage($trangThai) {
+        switch ($trangThai) {
+            case 0: return 'Mới lưu';
+            case 1: return 'Đã khóa';
+            case 2: return 'Đã phê duyệt';
+            default: return 'Không xác định';
+        }
     }
 
     /**

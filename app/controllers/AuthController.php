@@ -18,6 +18,14 @@ class AuthController extends Controller {
      * Hiển thị trang đăng nhập (view bên ngoài admin)
      */
     public function index() {
+        // Hiển thị thông báo lỗi nếu có
+        $error = '';
+        if (isset($_GET['error'])) {
+            if ($_GET['error'] === 'account_disabled') {
+                $error = 'Tài khoản không hoạt động. Vui lòng liên hệ admin hoặc cố vấn học tập để được hỗ trợ!';
+            }
+        }
+        
         // Không tự động đăng nhập nữa
         // Chỉ hiển thị form login bình thường
         require_once __DIR__ . '/../views/auth/login.php';
@@ -50,43 +58,50 @@ class AuthController extends Controller {
                     // Token hợp lệ và vai trò khớp
                     $savedUsername = $tokenData['TenDangNhap'];
                     
-                    // Tìm user trong database
-                    $users = $this->userModel->readAll();
-                    foreach ($users as $user) {
-                        if ($user['TenDangNhap'] === $savedUsername) {
-                            // Lưu session
-                            $_SESSION['user_id'] = $user['MaUser'];
-                            $_SESSION['user_name'] = $user['HoTen'];
-                            $_SESSION['user_role'] = $user['VaiTro'];
-                            $_SESSION['user_avatar'] = $user['Avatar'] ?? null;
-                            $_SESSION['logged_in'] = true;
-                            $_SESSION['login_type'] = $selectedRole;
-                            
-                            // Redirect theo role
-                            $this->redirectByRole($selectedRole, $user['VaiTro']);
+                    // Tìm user trong database bằng phương thức trực tiếp
+                    $user = $this->userModel->getByUsernameDirect($savedUsername);
+                    if ($user) {
+                        // Kiểm tra trạng thái tài khoản
+                        $trangThai = $user['TrangThai'] ?? 1;
+                        if ($trangThai == 0 || $trangThai === '0') {
+                            $this->showLoginError('Tài khoản không hoạt động. Vui lòng liên hệ admin hoặc cố vấn học tập để được hỗ trợ!');
                             return;
                         }
+                        
+                        // Lưu session
+                        $_SESSION['user_id'] = $user['MaUser'];
+                        $_SESSION['user_name'] = $user['HoTen'];
+                        $_SESSION['user_role'] = $user['VaiTro'];
+                        $_SESSION['user_avatar'] = $user['Avatar'] ?? null;
+                        $_SESSION['logged_in'] = true;
+                        $_SESSION['login_type'] = $selectedRole;
+                        
+                        // Redirect theo role
+                        $this->redirectByRole($selectedRole, $user['VaiTro']);
+                        return;
                     }
                 }
             }
             
             // Tìm user theo username (đăng nhập bình thường)
-            $users = $this->userModel->readAll();
+            $userData = $this->userModel->getByUsernameDirect($username);
             $loggedIn = false;
-            $userData = null;
             
-            foreach ($users as $user) {
-                if ($user['TenDangNhap'] !== $username) continue;
+            if ($userData) {
+                // Kiểm tra trạng thái tài khoản - nếu bị vô hiệu hóa thì không cho đăng nhập
+                $trangThai = $userData['TrangThai'] ?? 1;
+                if ($trangThai == 0 || $trangThai === '0') {
+                    $this->showLoginError('Tài khoản không hoạt động. Vui lòng liên hệ admin hoặc cố vấn học tập để được hỗ trợ!');
+                    return;
+                }
                 
-                $stored = $user['MatKhau'] ?? '';
+                $stored = $userData['MatKhau'] ?? '';
                 $verify = (strpos($stored, '$2y$') === 0 || strpos($stored, '$2a$') === 0)
                     ? password_verify($password, $stored)
                     : ($stored === $password);
                     
                 if ($verify) {
-                    $userData = $user;
                     $loggedIn = true;
-                    break;
                 }
             }
             

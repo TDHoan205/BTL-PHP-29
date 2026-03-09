@@ -42,6 +42,23 @@ class App {
                     if (array_key_exists('Avatar', $user)) {
                         $_SESSION['user_avatar'] = !empty($user['Avatar']) ? $user['Avatar'] : null;
                     }
+                    
+                    // Kiểm tra trạng thái tài khoản - nếu bị vô hiệu hóa thì logout
+                    $trangThai = $user['TrangThai'] ?? 1;
+                    if ($trangThai == 0 || $trangThai === '0') {
+                        // Xóa session và chuyển về login với thông báo
+                        $_SESSION = [];
+                        if (ini_get('session.use_cookies')) {
+                            $params = session_get_cookie_params();
+                            setcookie(session_name(), '', time() - 42000,
+                                $params['path'], $params['domain'],
+                                $params['secure'], $params['httponly']
+                            );
+                        }
+                        session_destroy();
+                        header('Location: index.php?url=Auth/index&error=account_disabled');
+                        exit;
+                    }
                 }
             } catch (Throwable $e) {
                 // Bỏ qua lỗi (vd: cột Avatar chưa tồn tại trong DB)

@@ -1,12 +1,86 @@
 <?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
+<?php
+// Kiểm tra admin (cả 2 cách lưu session)
+$isAdmin = false;
+if (isset($_SESSION['user_role']) && ($_SESSION['user_role'] === 'Admin' || strtolower($_SESSION['user_role']) === 'admin')) {
+    $isAdmin = true;
+} elseif (isset($_SESSION['user']) && isset($_SESSION['user']['VaiTro']) && ($_SESSION['user']['VaiTro'] === 'Admin' || strtolower($_SESSION['user']['VaiTro']) === 'admin')) {
+    $isAdmin = true;
+}
+$currentTrangThai = $data['trangThaiDiem'] ?? 0;
+?>
+
 <!-- Page Header -->
 <div class="page-header">
     <h4><i class="fas fa-star me-2"></i>Quản lý Điểm</h4>
-    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
-        <i class="fas fa-check me-2"></i>Phê duyệt điểm
-    </button>
+    <?php if (!empty($data['filterLop'])): ?>
+    <div class="d-flex gap-2">
+        <?php if ($currentTrangThai == 0): ?>
+            <form method="POST" action="index.php?url=Diem/lock" class="d-inline">
+                <input type="hidden" name="MaLopHocPhan" value="<?= htmlspecialchars($data['filterLop']) ?>">
+                <button type="submit" class="btn btn-secondary" onclick="return confirm('Khóa điểm sẽ không cho phép giảng viên sửa điểm. Tiếp tục?')">
+                    <i class="fas fa-lock me-2"></i>Khóa điểm
+                </button>
+            </form>
+        <?php elseif ($currentTrangThai == 1 && $isAdmin): ?>
+            <form method="POST" action="index.php?url=Diem/unlock" class="d-inline">
+                <input type="hidden" name="MaLopHocPhan" value="<?= htmlspecialchars($data['filterLop']) ?>">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Mở khóa để giảng viên có thể sửa điểm?')">
+                    <i class="fas fa-unlock me-2"></i>Mở khóa
+                </button>
+            </form>
+            <form method="POST" action="index.php?url=Diem/approve" class="d-inline">
+                <input type="hidden" name="MaLopHocPhan" value="<?= htmlspecialchars($data['filterLop']) ?>">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Phê duyệt điểm sẽ khóa vĩnh viễn. Tiếp tục?')">
+                    <i class="fas fa-check-double me-2"></i>Phê duyệt điểm
+                </button>
+            </form>
+        <?php elseif ($currentTrangThai == 2 && $isAdmin): ?>
+            <form method="POST" action="index.php?url=Diem/unapprove" class="d-inline">
+                <input type="hidden" name="MaLopHocPhan" value="<?= htmlspecialchars($data['filterLop']) ?>">
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Hủy phê duyệt để cho phép sửa điểm?')">
+                    <i class="fas fa-undo me-2"></i>Hủy phê duyệt
+                </button>
+            </form>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </div>
+
+<?php if (isset($_GET['success'])): ?>
+<?php 
+$successMsg = '';
+switch($_GET['success']) {
+    case '1': $successMsg = 'Khóa điểm thành công!'; break;
+    case '2': $successMsg = 'Phê duyệt điểm thành công!'; break;
+    case '3': $successMsg = 'Mở khóa điểm thành công!'; break;
+    case '4': $successMsg = 'Hủy phê duyệt thành công!'; break;
+}
+?>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($successMsg) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+<?php 
+$errorMsg = '';
+switch($_GET['error']) {
+    case '1': $errorMsg = 'Khóa điểm thất bại!'; break;
+    case '2': $errorMsg = 'Phê duyệt điểm thất bại!'; break;
+    case '3': $errorMsg = 'Mở khóa điểm thất bại!'; break;
+    case '4': $errorMsg = 'Hủy phê duyệt thất bại!'; break;
+    case 'locked': $errorMsg = 'Điểm đã bị khóa! Chỉ admin mới có thể sửa.'; break;
+    case 'unauthorized': $errorMsg = 'Bạn không có quyền thực hiện thao tác này!'; break;
+}
+?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($errorMsg) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($data['error'])): ?>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -66,10 +140,24 @@
     </div>
 </div>
 
+<?php
+$isAdmin = isset($_SESSION['user_role']) && ($_SESSION['user_role'] === 'Admin' || strtolower($_SESSION['user_role']) === 'admin');
+if (!$isAdmin && isset($_SESSION['user']) && isset($_SESSION['user']['VaiTro'])) {
+    $isAdmin = ($_SESSION['user']['VaiTro'] === 'Admin' || strtolower($_SESSION['user']['VaiTro']) === 'admin');
+}
+$currentTrangThai = $data['trangThaiDiem'] ?? 0;
+// Sau khi khóa điểm (TrangThai >= 1): KHÔNG ai được sửa (kể cả admin)
+// Admin chỉ có thể mở khóa hoặc phê duyệt
+$isEditable = ($currentTrangThai == 0);
+?>
+
 <!-- Data Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Bảng điểm sinh viên</h5>
+        <?php if ($currentTrangThai > 0): ?>
+            <span class="badge bg-warning text-dark"><i class="fas fa-lock me-1"></i>Điểm đã khóa - Vui lòng mở khóa để sửa</span>
+        <?php endif; ?>
         <div>
             <a href="index.php?url=Diem/exportExcel<?= !empty($data['filterLop']) ? '&lop=' . urlencode($data['filterLop']) : '' ?>" class="btn btn-outline-primary btn-sm me-2" <?= empty($data['filterLop']) ? 'onclick="alert(\'Vui lòng chọn lớp học phần trước\'); return false;"' : '' ?>>
                 <i class="fas fa-file-excel me-1"></i>Xuất Excel
@@ -107,9 +195,9 @@
                                 <td><strong><?= $row['MSSV'] ?? $row['MaSinhVien'] ?? '' ?></strong></td>
                                 <td><?= $row['HoTen'] ?? '' ?></td>
                                 <td><?= $row['MaLopHocPhan'] ?? '' ?></td>
-                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][qt]" value="<?= $row['DiemCC'] ?? $row['DiemQT'] ?? '' ?>" class="form-control form-control-sm text-center input-diem"></td>
-                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][gk]" value="<?= $row['DiemGK'] ?? '' ?>" class="form-control form-control-sm text-center input-diem"></td>
-                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][ck]" value="<?= $row['DiemCK'] ?? '' ?>" class="form-control form-control-sm text-center input-diem"></td>
+                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][qt]" value="<?= $row['DiemCC'] ?? $row['DiemQT'] ?? '' ?>" class="form-control form-control-sm text-center input-diem" <?= !$isEditable ? 'disabled' : '' ?>></td>
+                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][gk]" value="<?= $row['DiemGK'] ?? '' ?>" class="form-control form-control-sm text-center input-diem" <?= !$isEditable ? 'disabled' : '' ?>></td>
+                                <td class="td-diem"><input type="number" step="0.1" min="0" max="10" name="diem[<?= $row['ID'] ?? 0 ?>][ck]" value="<?= $row['DiemCK'] ?? '' ?>" class="form-control form-control-sm text-center input-diem" <?= !$isEditable ? 'disabled' : '' ?>></td>
                                 <td class="text-center"><strong><?= $row['DiemTongKet'] ?? '-' ?></strong></td>
                                 <td class="text-center"><?= $row['DiemChu'] ?? '-' ?></td>
                                 <td class="text-center">
@@ -124,7 +212,15 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-pending">Chờ duyệt</span>
+                                    <?php 
+                                    $trangThai = $row['TrangThaiDiem'] ?? 0;
+                                    switch($trangThai) {
+                                        case 0: echo '<span class="status-pending">Mới lưu</span>'; break;
+                                        case 1: echo '<span class="status-locked">Đã khóa</span>'; break;
+                                        case 2: echo '<span class="status-approved">Đã phê duyệt</span>'; break;
+                                        default: echo '<span class="text-muted">-</span>';
+                                    }
+                                    ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -142,13 +238,10 @@
                     </tbody>
                 </table>
             </div>
-            <?php if(isset($data['bangdiem']) && count($data['bangdiem']) > 0): ?>
+            <?php if(isset($data['bangdiem']) && count($data['bangdiem']) > 0 && $isEditable): ?>
             <div class="card-footer d-flex justify-content-end gap-2">
                 <button type="submit" name="action" value="save" class="btn btn-primary">
                     <i class="fas fa-save me-2"></i>Lưu điểm
-                </button>
-                <button type="submit" name="action" value="lock" class="btn btn-secondary">
-                    <i class="fas fa-lock me-2"></i>Khóa điểm
                 </button>
             </div>
             <?php endif; ?>

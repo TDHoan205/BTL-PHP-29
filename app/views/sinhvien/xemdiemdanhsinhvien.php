@@ -78,6 +78,10 @@ require_once __DIR__ . '/_layout_sv.php';
                                 $soBuoiDaDD = $dd['SoBuoiDaDiemDanh'] ?? 0;
                                 $soBuoiCoMat = $dd['SoBuoiCoMat'] ?? 0;
                                 $tongBuoi = $dd['TongBuoi'] ?? 0;
+                                
+                                // Tính số buổi thiếu (để đạt 80%)
+                                $soBuoiCanDat = ceil($tongBuoi * 0.8);
+                                $soBuoiThieu = max(0, $soBuoiCanDat - $soBuoiDaDD);
                             ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($dd['MaLopHocPhan'] ?? '') ?></strong></td>
@@ -109,7 +113,7 @@ require_once __DIR__ . '/_layout_sv.php';
                                     <?php elseif ($daDuBuoi): ?>
                                         <span class="badge badge-success"><i class="fas fa-check"></i> Đủ buổi</span>
                                     <?php else: ?>
-                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Thiếu</span>
+                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Thiếu <?= $soBuoiThieu ?> buổi</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>

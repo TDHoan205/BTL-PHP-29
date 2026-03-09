@@ -15,6 +15,7 @@ class LopHocPhanModel extends Model {
     public $PhongHoc;
     public $SoLuongToiDa;
     public $TrangThai;
+    public $ChoPhepDangKyKhacKhoa;
 
     /**
      * Lấy tất cả lớp học phần kèm thông tin chi tiết
@@ -121,7 +122,8 @@ class LopHocPhanModel extends Model {
         try {
             $query = "UPDATE {$this->table_name} 
                       SET MaMonHoc=:MaMonHoc, MaHocKy=:MaHocKy, MaGiangVien=:MaGiangVien, 
-                          PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai 
+                          PhongHoc=:PhongHoc, SoLuongToiDa=:SoLuongToiDa, TrangThai=:TrangThai,
+                          ChoPhepDangKyKhacKhoa=:ChoPhepDangKyKhacKhoa
                       WHERE MaLopHocPhan=:MaLopHocPhan";
             $stmt = $this->conn->prepare($query);
 
@@ -132,6 +134,7 @@ class LopHocPhanModel extends Model {
             $stmt->bindValue(":PhongHoc", $this->sanitize($this->PhongHoc) ?: null);
             $stmt->bindValue(":SoLuongToiDa", (int)($this->SoLuongToiDa ?: 60));
             $stmt->bindValue(":TrangThai", (int)($this->TrangThai ?? 1));
+            $stmt->bindValue(":ChoPhepDangKyKhacKhoa", (int)($this->ChoPhepDangKyKhacKhoa ?? 0));
 
             if ($stmt->execute()) {
                 return true;
@@ -192,22 +195,32 @@ class LopHocPhanModel extends Model {
     /**
      * Lấy danh sách lớp học phần đang mở trong học kỳ hiện tại (cho sinh viên đăng ký)
      * Bao gồm: Mã LHP, Môn học, Giảng viên, Lịch học, Sĩ số còn lại/Tối đa
+     * @param string|null $maHocKy Mã học kỳ
+     * @param string|null $maKhoa Mã khoa (để lọc môn cùng khoa với sinh viên)
      */
-    public function getAvailableForRegistration($maHocKy = null) {
+    public function getAvailableForRegistration($maHocKy = null, $maKhoa = null) {
         try {
-            $sql = "SELECT lhp.MaLopHocPhan, lhp.MaMonHoc, lhp.MaHocKy, lhp.PhongHoc, lhp.SoLuongToiDa, lhp.TrangThai,
+            $sql = "SELECT lhp.MaLopHocPhan, lhp.MaMonHoc, lhp.MaHocKy, lhp.PhongHoc, lhp.SoLuongToiDa, lhp.TrangThai, lhp.ChoPhepDangKyKhacKhoa,
                     mh.TenMonHoc, mh.SoTinChi,
                     gv.MaGiangVien, gv.HoTen as TenGiangVien,
                     hk.TenHocKy, hk.NamHoc,
+                    n.MaKhoa,
                     (SELECT COUNT(*) FROM DANG_KY_HOC dk WHERE dk.MaLopHocPhan = lhp.MaLopHocPhan) as SiSoDangKy
                     FROM {$this->table_name} lhp
                     LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
                     LEFT JOIN GIANG_VIEN gv ON lhp.MaGiangVien = gv.MaGiangVien
                     LEFT JOIN HOC_KY hk ON lhp.MaHocKy = hk.MaHocKy
+                    LEFT JOIN NGANH n ON mh.MaNganh = n.MaNganh
                     WHERE lhp.TrangThai = 1";
             
             if ($maHocKy) {
                 $sql .= " AND lhp.MaHocKy = :MaHocKy";
+            }
+            
+            // Lọc theo khoa (nếu có) - sinh viên chỉ đăng ký môn cùng khoa
+            // TRỪ khi lớp học phần cho phép đăng ký khác khoa
+            if ($maKhoa) {
+                $sql .= " AND (n.MaKhoa = :MaKhoa OR lhp.ChoPhepDangKyKhacKhoa = 1 OR mh.MaNganh = 'DG')";
             }
             
             $sql .= " ORDER BY mh.TenMonHoc, lhp.MaLopHocPhan";
@@ -215,6 +228,9 @@ class LopHocPhanModel extends Model {
             $stmt = $this->conn->prepare($sql);
             if ($maHocKy) {
                 $stmt->bindParam(":MaHocKy", $maHocKy);
+            }
+            if ($maKhoa) {
+                $stmt->bindParam(":MaKhoa", $maKhoa);
             }
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -246,16 +262,24 @@ class LopHocPhanModel extends Model {
 
     /**
      * Lấy danh sách các môn học từ lớp học phần đang mở (cho dropdown lọc)
+     * @param string|null $maHocKy Mã học kỳ
+     * @param string|null $maKhoa Mã khoa (để lọc môn cùng khoa)
      */
-    public function getMonHocForFilter($maHocKy = null) {
+    public function getMonHocForFilter($maHocKy = null, $maKhoa = null) {
         try {
             $sql = "SELECT DISTINCT mh.MaMonHoc, mh.TenMonHoc
                     FROM {$this->table_name} lhp
                     LEFT JOIN MON_HOC mh ON lhp.MaMonHoc = mh.MaMonHoc
+                    LEFT JOIN NGANH n ON mh.MaNganh = n.MaNganh
                     WHERE lhp.TrangThai = 1";
             
             if ($maHocKy) {
                 $sql .= " AND lhp.MaHocKy = :MaHocKy";
+            }
+            
+            // Lọc theo khoa (nếu có)
+            if ($maKhoa) {
+                $sql .= " AND n.MaKhoa = :MaKhoa";
             }
             
             $sql .= " ORDER BY mh.TenMonHoc";
@@ -263,6 +287,9 @@ class LopHocPhanModel extends Model {
             $stmt = $this->conn->prepare($sql);
             if ($maHocKy) {
                 $stmt->bindParam(":MaHocKy", $maHocKy);
+            }
+            if ($maKhoa) {
+                $stmt->bindParam(":MaKhoa", $maKhoa);
             }
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -62,7 +62,8 @@ $flash = $data['flash'] ?? null;
             </div>
             <div class="mb-4">
                 <div class="form-check">
-                    <input type="checkbox" name="TrangThai" value="1" class="form-check-input" id="editTrangThai" <?= (isset($u['TrangThai']) ? (int)$u['TrangThai'] : 1) ? 'checked' : '' ?>>
+                    <input type="hidden" name="TrangThai" value="0">
+                    <input type="checkbox" name="TrangThai" value="1" class="form-check-input" id="editTrangThai" <?= (isset($u['TrangThai']) && (int)$u['TrangThai'] === 1) ? 'checked' : '' ?>>
                     <label class="form-check-label" for="editTrangThai">Hoạt động</label>
                 </div>
             </div>

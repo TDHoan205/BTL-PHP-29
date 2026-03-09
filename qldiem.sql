@@ -120,6 +120,11 @@ CREATE TABLE DANG_KY_HOC (
     DiemChu VARCHAR(2),
     DiemSo FLOAT,
     KetQua BIT,
+    TrangThaiDiem TINYINT DEFAULT 0 COMMENT '0=Mới lưu, 1=Đã khóa, 2=Đã phê duyệt',
+    NgayKhoaDiem DATETIME DEFAULT NULL COMMENT 'Ngày khóa điểm',
+    NguoiKhoaDiem VARCHAR(20) DEFAULT NULL COMMENT 'Người khóa điểm',
+    NgayPheDuyet DATETIME DEFAULT NULL COMMENT 'Ngày phê duyệt điểm',
+    NguoiPheDuyet VARCHAR(20) DEFAULT NULL COMMENT 'Người phê duyệt điểm',
     FOREIGN KEY (MaSinhVien) REFERENCES SINH_VIEN(MaSinhVien),
     FOREIGN KEY (MaLopHocPhan) REFERENCES LOP_HOC_PHAN(MaLopHocPhan),
     CONSTRAINT UQ_SinhVien_Lop UNIQUE (MaSinhVien, MaLopHocPhan)
@@ -368,3 +373,45 @@ CREATE TABLE IF NOT EXISTS DIEM_DANH (
 --     PhongHoc VARCHAR(50),
 --     FOREIGN KEY (MaLopHocPhan) REFERENCES LOP_HOC_PHAN(MaLopHocPhan) ON DELETE CASCADE
 -- );
+
+-- 16. Bảng YEU_CAU_DOI_MAT_KHAU (Quên mật khẩu)
+CREATE TABLE IF NOT EXISTS YEU_CAU_DOI_MAT_KHAU (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    MaUser INT NOT NULL COMMENT 'Mã người dùng trong bảng USER',
+    TenDangNhap VARCHAR(50) NOT NULL COMMENT 'Tên đăng nhập của người yêu cầu',
+    Email VARCHAR(100) NOT NULL COMMENT 'Email để gửi mật khẩu mới',
+    HoTen VARCHAR(100) NOT NULL COMMENT 'Họ tên người yêu cầu',
+    VaiTro VARCHAR(20) NOT NULL COMMENT 'Vai trò: Admin, GiangVien, SinhVien',
+    LyDo TEXT NULL COMMENT 'Lý do quên mật khẩu (tùy chọn)',
+    NgayYeuCau DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian gửi yêu cầu',
+    TrangThai ENUM('ChoXuLy', 'DaDuyet', 'TuChoi') DEFAULT 'ChoXuLy' COMMENT 'Trạng thái xử lý',
+    NguoiXuLy INT NULL COMMENT 'MaUser của admin xử lý',
+    NgayXuLy DATETIME NULL COMMENT 'Thời gian admin xử lý',
+    GhiChuAdmin TEXT NULL COMMENT 'Ghi chú từ admin (lý do từ chối, ...)',
+    INDEX idx_trang_thai (TrangThai),
+    INDEX idx_ma_user (MaUser),
+    INDEX idx_ngay_yeu_cau (NgayYeuCau),
+    CONSTRAINT fk_yc_user FOREIGN KEY (MaUser) REFERENCES `USER`(MaUser) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Bảng quản lý yêu cầu đổi mật khẩu';
+
+-- 17. Bảng REMEMBER_TOKENS (Ghi nhớ đăng nhập)
+CREATE TABLE IF NOT EXISTS REMEMBER_TOKENS (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    TenDangNhap VARCHAR(50) NOT NULL COMMENT 'Tên đăng nhập của user',
+    Token VARCHAR(255) NOT NULL COMMENT 'Token ngẫu nhiên (hash)',
+    VaiTro ENUM('Admin', 'GiangVien', 'SinhVien') NOT NULL COMMENT 'Vai trò đăng nhập',
+    NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo token',
+    NgayHetHan DATETIME NOT NULL COMMENT 'Thời gian hết hạn (30 ngày)',
+    UserAgent VARCHAR(255) NULL COMMENT 'Thông tin trình duyệt (bảo mật)',
+    IPAddress VARCHAR(45) NULL COMMENT 'Địa chỉ IP (bảo mật)',
+    UNIQUE KEY unique_token (Token),
+    INDEX idx_username (TenDangNhap),
+    INDEX idx_expiry (NgayHetHan)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Bảng lưu token Ghi nhớ đăng nhập';
+
+-- Thêm cột YeuCauDoiMatKhau vào bảng USER
+ALTER TABLE `USER`
+ADD COLUMN IF NOT EXISTS YeuCauDoiMatKhau TINYINT(1) DEFAULT 0
+COMMENT 'Đánh dấu người dùng cần đổi mật khẩu khi đăng nhập';

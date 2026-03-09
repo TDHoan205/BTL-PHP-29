@@ -132,6 +132,20 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
         row.style.display = text.includes(filter) ? '' : 'none';
     });
 });
+
+// Lọc theo khoa
+document.getElementById('filterKhoa').addEventListener('change', function() {
+    let maKhoa = this.value.toLowerCase();
+    let rows = document.querySelectorAll('#dataTable tbody tr');
+    rows.forEach(row => {
+        let khoaInRow = row.querySelector('td:nth-child(3)').textContent.toLowerCase().trim();
+        if (maKhoa === '' || khoaInRow === maKhoa) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
 </script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

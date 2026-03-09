@@ -17,6 +17,22 @@
 </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['deleted'])): ?>
+<div class="alert alert-success alert-dismissible fade show" role="alert" id="deleteSuccessAlert">
+    <i class="fas fa-check-circle me-2"></i>Xóa sinh viên thành công!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<script>
+    // Tự động ẩn thông báo sau 3 giây
+    setTimeout(function() {
+        var alert = document.getElementById('deleteSuccessAlert');
+        if (alert) {
+            alert.style.display = 'none';
+        }
+    }, 3000);
+</script>
+<?php endif; ?>
+
 <!-- Filter Bar -->
 <div class="filter-bar">
     <div class="search-box">
